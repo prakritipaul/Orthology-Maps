@@ -1,0 +1,51 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r include=TRUE}
+library(Seurat)
+library(Matrix)
+library(MASS)
+```
+
+```{r}
+iniG1_dir <- "/Users/prakritipaul/Desktop/GSE131155_RAW/GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
+
+iniG1_h5 <- Read10X_h5(iniG1_dir)
+```
+
+# Write out the sparse matrix
+```{r include=TRUE}
+writeMM(iniG1_h5, file = "iniG1_h5_out.txt")
+```
+# R crashes
+```{r include=TRUE}
+write.matrix(iniG1_h5, file = "iniG1_h5_out_MASS.txt")
+```
+
+# Try with sparse
+```{r include=TRUE}
+writeMM(iniG1_h5, file = "iniG1_h5_out.csv")
+```
+
+# Can we get it back?
+# Yes 
+```{r include=TRUE}
+iniG1_in <- readMM("iniG1_h5_out.txt")
+```
+
+# Do we get the dimnames if we use a csv instead of txt?
+```{r include=TRUE}
+iniG1_in_csv <- readMM("iniG1_h5_out.csv")
+```
+
+# Give it rownames 
+```{r include=TRUE}
+rownames(iniG1_in) <- rownames(iniG1_h5)
+colnames(iniG1_in) <- colnames(iniG1_h5)
+```
