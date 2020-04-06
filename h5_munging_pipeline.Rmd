@@ -1,0 +1,78 @@
+---
+title: "test_4D_file_read"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# PURPOSE OF PIPELINE: To have/use Chen's raw 4D matrices in Vera
+#                      because Seurat in Vera can't read in h5 files
+#                      so I'm doing h5 reading in Mac and then exporting
+#                      the sparse matrix and its dimnames
+
+```{r pressure, echo=FALSE}
+library(Seurat)
+library(Matrix)
+```
+# DO ON MAC
+## Export sparse matrix, row and colnames.
+```{r include=TRUE}
+
+### Set the following variables ###
+# Note: All raw and h5_munged files will be present in Google Drive
+#       Code in Git
+
+h5_matrix_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
+
+h5_matrix_out_name <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_out.txt"
+
+h5_matrix_rownames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_rownames.csv"
+
+h5_matrix_colnames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_colnames.csv"
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+# DO ON VERA
+## Import h5_matrix, label row and colnames.
+```{r include=TRUE}
+
+### Use the same variable names as above ###
+
+h5_matrix_out_name <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_out.txt"
+
+h5_matrix_rownames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_rownames.csv"
+
+h5_matrix_colnames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_colnames.csv"
+
+h5_matrix_in <- readMM(h5_matrix_out_name)
+
+h5_matrix_rownames <- read.table(h5_matrix_rownames_csv,
+                             header = FALSE,
+                             stringsAsFactors = FALSE)$V1
+
+h5_matrix_colnames <- read.table(h5_matrix_colnames_csv,
+                             header = FALSE,
+                             stringsAsFactors = FALSE)$V1
+
+rownames(h5_matrix_in) <- h5_matrix_rownames
+
+colnames(h5_matrix_in) <- h5_matrix_colnames
+```
