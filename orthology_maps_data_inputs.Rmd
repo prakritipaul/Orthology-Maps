@@ -1,0 +1,112 @@
+---
+title: "orthology_maps_data_inputs"
+output: html_document
+---
+
+# Purpose of Notebook
+# Import all data needed for Orthology Maps Projects
+
+## (Ciona) 4D data
+## (Zebrafish) Schier: 
+1) 30% epiboly (2)
+2) 3-somite (1, 3)
+3) 50% epiboly (4, 7)
+4) 60% epiboly (3, 10)
+5) 6-somite (2, 12)
+6) 75% epiboly (3, 15)
+7) 90% epiboly (3, 18)
+8) bud (4, 22)
+9) dome (1, 23)
+10) high (2, 25)
+11) oblong (2, 27)
+12 (shield, 1, 28)
+
+## (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=TRUE}
+library(Seurat)
+```
+
+############  KLEIN ZEBRAFISH ######### 
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE112294
+# GSE112294_RAW.tar
+# Extract -> GSM3067189_04hpf.csv
+
+```{r include=TRUE}
+zeb_4hpf_dir <- "/home/pprakriti/Desktop/Klein_Wagner_Data/GSM3067189_04hpf.csv"
+
+zeb_4hpf_csv <- read.table(zeb_4hpf_dir,
+                           sep = ",",
+                           header = TRUE,
+                           stringsAsFactors = FALSE)
+```
+
+# Can also just extract individual files
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067189
+# (Raw UMI-filtered counts)
+
+# Note: *_nm are normalized counts
+```{r include=TRUE}
+zeb_4hpf_dir_2 <- "/home/pprakriti/Desktop/Klein_Wagner_Data/Individual CSVs/GSM3067189_04hpf_individual.csv"
+
+zeb_4hpf_csv_2 <- read.table(zeb_4hpf_dir_2,
+                           sep = ",",
+                           header = TRUE,
+                           stringsAsFactors = FALSE)
+```
+
+############  SCHIER ZEBRAFISH ######### 
+Where I got info about files from: *https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM2838409
+1) Supplementary_files_format_and_content: Tab-delimited text files include gene levels (UMI counts or FKPM) for each sample
+2) Full-length fragments
+SS2_fpkm.txt.gz
+
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106587
+# GSE106466	Single-cell RNAseq (SMART-seq2) of wild-type (TLAB) and MZoep (tz57) zebrafish embryos at 50% epiboly stage
+
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106466
+```{r include=TRUE}
+schier_zeb_dir <- "/home/pprakriti/Desktop/Schier_Farrell_Data/GSE106466_SS2_umi_cnts.txt"
+
+schier_zeb_data <- read.table(schier_zeb_dir,
+                              header = TRUE,
+                              stringsAsFactors = FALSE)
+```
+
+OR
+
+1) https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106587
+2) GSE106587_RAW.tar
+3) Extract GSM3084402_10xWT6S_matrix.mtx.gz and other 10x files
+4) Put them into a test folder 
+```{r include=TRUE}
+schier_10x_dir <- "/home/pprakriti/Desktop/Schier_Farrell_Data/test_10_wt"
+
+test_10x <- Read10X(schier_10x_dir)
+```
+
+OR
+### THIS IS WHAT I WANT!
+1) https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106474
+2) GSE106474_UMICounts.txt.gz
+```{r include=TRUE}
+dir_3 <- "/home/pprakriti/Desktop/Schier_Farrell_Data/GSE106474_UMICounts.txt"
+
+dir_3_read <- read.table(dir_3,
+                         header = TRUE,
+                         sep = "\t",
+                         stringsAsFactors = FALSE)
+```
+
+
+#########   CIONA   ######### 
+## All the 4D raw matrices
+```{r include=TRUE}
+iniG1_dir <- "/home/pprakriti/Desktop/4D_GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
+iniG1_matrix <- Read10X_h5(test_h5)
+```
+
