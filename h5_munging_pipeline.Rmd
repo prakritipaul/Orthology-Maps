@@ -17,23 +17,29 @@ library(Seurat)
 library(Matrix)
 ```
 
-# DO ON MAC
-## Write out h5_matrix
+########################## START DO ON MAC: Write out h5_matrix ##########################
+iniG1 -> midG2: Did manually
+earN2 -> midG1: Done in code chunks below
+
+##########################################################################################
+
+#### earN2 #####
 ```{r include=TRUE}
 
 ####################################
-# SET THIS 
+# SET THESE
 
-stage_name <- "iniG1"
+stage_file_name <- "GSM3764769_earN2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "earN2"
 
 ####################################
 
 # Directory from where I will access raw matrix.
-mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/GSM3764764_"
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
 # Directory where I will place output files.
 mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
 
-h5_matrix_dir <- paste0(mac_dir, stage_name, "_raw_gene_bc_matrices_h5.h5")
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
 
 h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
 
@@ -59,11 +65,777 @@ write.table(colnames(h5_matrix),
             col.names = FALSE)
 ```
 
-# DO ON VERA
+#### latN1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764770_latN1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latN1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latN2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764771_latN2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latN2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### iniTI1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764772_iniTI1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "iniTI1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### iniTI2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764773_iniTI2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "iniTI2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### earTI1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764774_earTI1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "earTI1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### earTI2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764775_earTI2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "earTI2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### midTII1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764776_midTII1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "midTII1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### midTII2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764777_midTII2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "midTII2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTI1a #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764778_latTI1a_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTI1a"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTI1b #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764779_latTI1b_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTI1b"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTI2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764780_latTI2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTI2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTII1a #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764781_latTII1a_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTII1a"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTII1b #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764782_latTII1b_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTII1b"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### latTII2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764783_latTII2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "latTII2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### larva1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764784_larva1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "larva1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+
+#### larva2 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764785_larva2_raw_gene_bc_matrices_h5.h5"
+stage_name <- "larva2"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### larva3 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764786_larva3_raw_gene_bc_matrices_h5.h5"
+stage_name <- "larva3"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+#### midG1 #####
+```{r include=TRUE}
+
+####################################
+# SET THESE
+
+stage_file_name <- "GSM3764766_midG1_raw_gene_bc_matrices_h5.h5"
+stage_name <- "midG1"
+
+####################################
+
+# Directory from where I will access raw matrix.
+mac_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/"
+# Directory where I will place output files.
+mac_dir_2 <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/"
+
+h5_matrix_dir <- paste0(mac_dir, stage_file_name)
+
+h5_matrix_out_name <- paste0(mac_dir_2, stage_name, "_out.txt")
+
+h5_matrix_rownames_csv <- paste0(mac_dir_2, stage_name, "_rownames.csv")
+
+h5_matrix_colnames_csv <- paste0(mac_dir_2, stage_name, "_colnames.csv")
+
+####################################
+
+### Export h5_matrix + dimnames ### 
+h5_matrix <- Read10X_h5(h5_matrix_dir)
+
+writeMM(h5_matrix, h5_matrix_out_name)
+
+write.table(rownames(h5_matrix),
+            h5_matrix_rownames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+
+write.table(colnames(h5_matrix), 
+            h5_matrix_colnames_csv,
+            row.names = FALSE,
+            col.names = FALSE)
+```
+
+############################### END ON MAC ###################################
+
+FINISHED earN1 -> midG1 
+
+############################### START ON VERA ##################################
+
+Manually updated stage_name and final_matrix_name variables
+
+###############################################################################
+
 ## Make h5_matrix_in
 ```{r include=TRUE}
 
-###################################### 
+######################################
 
 stage_name <- "iniG1"
 
@@ -94,7 +866,6 @@ rownames(h5_matrix_in) <- h5_matrix_rownames
 
 colnames(h5_matrix_in) <- h5_matrix_colnames
 ```
-
 
 # Rename h5_matrix_in
 ```{r include=TRUE}
