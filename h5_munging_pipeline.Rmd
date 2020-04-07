@@ -16,6 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(Seurat)
 library(Matrix)
 ```
+
 # DO ON MAC
 ## Export sparse matrix, row and colnames.
 ```{r include=TRUE}
@@ -23,14 +24,15 @@ library(Matrix)
 ### Set the following variables ###
 # Note: All raw and h5_munged files will be present in Google Drive
 #       Code in Git
+stage_name <- "iniG1"
 
-h5_matrix_dir <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
+h5_matrix_dir <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/4D_GSE131155_RAW/GSM3764764_", stage_name, "_raw_gene_bc_matrices_h5.h5")
 
-h5_matrix_out_name <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_out.txt"
+h5_matrix_out_name <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_out.txt")
 
-h5_matrix_rownames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_rownames.csv"
+h5_matrix_rownames_csv <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_rownames.csv")
 
-h5_matrix_colnames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_colnames.csv"
+h5_matrix_colnames_csv <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_colnames.csv")
 
 ####################################
 
@@ -55,12 +57,15 @@ write.table(colnames(h5_matrix),
 ```{r include=TRUE}
 
 ### Use the same variable names as above ###
+stage_name <- "iniG1"
 
-h5_matrix_out_name <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_out.txt"
+h5_matrix_out_name <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_out.txt")
 
-h5_matrix_rownames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_rownames.csv"
+h5_matrix_rownames_csv <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_rownames.csv")
 
-h5_matrix_colnames_csv <- "~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/iniG1_colnames.csv"
+h5_matrix_colnames_csv <- paste0("~/Google Drive (ppaul@princeton.edu)/Levine Lab/Orthology Maps/h5_munging/h5_munging_output_files/", stage_name, "_colnames.csv")
+
+#######
 
 h5_matrix_in <- readMM(h5_matrix_out_name)
 
@@ -76,3 +81,4 @@ rownames(h5_matrix_in) <- h5_matrix_rownames
 
 colnames(h5_matrix_in) <- h5_matrix_colnames
 ```
+
