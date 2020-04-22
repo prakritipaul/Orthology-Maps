@@ -6,7 +6,8 @@ output: html_document
 # Purpose of Notebook
 # Import all data needed for Orthology Maps Projects
 
-## (Ciona) 4D data
+## (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
+
 ## (Zebrafish) Schier: 
 1) 30% epiboly (2)
 2) 3-somite (1, 3)
@@ -21,7 +22,8 @@ output: html_document
 11) oblong (2, 27)
 12 (shield, 1, 28)
 
-## (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
+## Ciona
+# iniG, midG, earN, latN, iniT1, earT1, midT2, latT1, latT2, larva
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -29,84 +31,394 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r include=TRUE}
 library(Seurat)
+library(dplyr)
 ```
 
 ############  KLEIN ZEBRAFISH ######### 
-# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE112294
-# GSE112294_RAW.tar
-# Extract -> GSM3067189_04hpf.csv
 
+# Extract individual Raw UMI-filtered counts (csv). Example below. 
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067195
+# GSM3067195_24hpf.csv.gz
+
+# [LOC100000009 x DEW050_GTCTCTCT_AGGAGCTT]
+# 30677 x *
 ```{r include=TRUE}
-zeb_4hpf_dir <- "/home/pprakriti/Desktop/Klein_Wagner_Data/GSM3067189_04hpf.csv"
+zeb_4hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067189_04hpf.csv" 
+# 4278
+zeb_4hpf_df <- read.table(zeb_4hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE,
+                          row.names = 1)
 
-zeb_4hpf_csv <- read.table(zeb_4hpf_dir,
-                           sep = ",",
-                           header = TRUE,
-                           stringsAsFactors = FALSE)
-```
+zeb_6hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067190_06hpf.csv" 
+# 5693
+zeb_6hpf_df <- read.table(zeb_6hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
 
-# Can also just extract individual files
-# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067189
-# (Raw UMI-filtered counts)
+zeb_8hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067191_08hpf.csv" 
+# 3569
+zeb_8hpf_df <- read.table(zeb_8hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
 
-# Note: *_nm are normalized counts
-```{r include=TRUE}
-zeb_4hpf_dir_2 <- "/home/pprakriti/Desktop/Klein_Wagner_Data/Individual CSVs/GSM3067189_04hpf_individual.csv"
+zeb_10hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067192_10hpf.csv" 
+# 4281
+zeb_10hpf_df <- read.table(zeb_10hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
 
-zeb_4hpf_csv_2 <- read.table(zeb_4hpf_dir_2,
-                           sep = ",",
-                           header = TRUE,
-                           stringsAsFactors = FALSE)
+zeb_14hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067193_14hpf.csv" 
+# 4002
+zeb_14hpf_df <- read.table(zeb_14hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+zeb_18hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067194_18hpf.csv" 
+# 6963
+zeb_18hpf_df <- read.table(zeb_18hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+zeb_24hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Klein_2018/GSM3067195_24hpf.csv" 
+# 7970
+zeb_24hpf_df <- read.table(zeb_24hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
 ```
 
 ############  SCHIER ZEBRAFISH ######### 
-Where I got info about files from: *https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM2838409
-1) Supplementary_files_format_and_content: Tab-delimited text files include gene levels (UMI counts or FKPM) for each sample
-2) Full-length fragments
-SS2_fpkm.txt.gz
 
-# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106587
-# GSE106466	Single-cell RNAseq (SMART-seq2) of wild-type (TLAB) and MZoep (tz57) zebrafish embryos at 50% epiboly stage
+# Data from:
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106474
+# GSE106474_UMICounts.txt.gz
 
-# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106466
+# [A1CF x ZFDOME_WT_DS5_CGGACCGCAGGT]
+# 23974 x *
 ```{r include=TRUE}
-schier_zeb_dir <- "/home/pprakriti/Desktop/Schier_Farrell_Data/GSE106466_SS2_umi_cnts.txt"
+schier_all_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/Schier_2018/GSE106474_UMICounts.txt"
 
-schier_zeb_data <- read.table(schier_zeb_dir,
-                              header = TRUE,
-                              stringsAsFactors = FALSE)
+schier_all_df <- read.table(schier_all_dir,
+                            header = TRUE,
+                            sep = "\t",
+                            stringsAsFactors = FALSE)
 ```
 
-OR
-
-1) https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106587
-2) GSE106587_RAW.tar
-3) Extract GSM3084402_10xWT6S_matrix.mtx.gz and other 10x files
-4) Put them into a test folder 
+# Dimnames is a list
+# Set rownames and colnames
 ```{r include=TRUE}
-schier_10x_dir <- "/home/pprakriti/Desktop/Schier_Farrell_Data/test_10_wt"
+rows <- dimnames(schier_all_df)[[1]]
+cols <- dimnames(schier_all_df)[[2]]
 
-test_10x <- Read10X(schier_10x_dir)
+rownames(schier_all_df) <- rows
+colnames(schier_all_df) <- cols
 ```
 
-OR
-### THIS IS WHAT I WANT!
-1) https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE106474
-2) GSE106474_UMICounts.txt.gz
+# Let's get all the unique names for stages
 ```{r include=TRUE}
-dir_3 <- "/home/pprakriti/Desktop/Schier_Farrell_Data/GSE106474_UMICounts.txt"
+all_schier_colnames <- unique(unlist(strsplit(colnames(schier_all_df), "_")))
+schier_stage_names <- all_schier_colnames[grepl("ZF", all_schier_colnames)]
+```
 
-dir_3_read <- read.table(dir_3,
-                         header = TRUE,
-                         sep = "\t",
-                         stringsAsFactors = FALSE)
+# 12 stages Dataframes 
+```{r include=TRUE}
+all_rownames <- rownames(ZFHIGH_df)
+
+# 1 311
+ZFHIGH_df <- select(schier_all_df, contains("ZFHIGH"))
+colnames(ZFHIGH_df) <- dimnames(ZFHIGH_df)[[2]]
+
+# 2 200
+ZFOBLONG_df <- select(schier_all_df, contains("ZFOBLONG"))
+rownames(ZFOBLONG_df) <- all_rownames
+colnames(ZFOBLONG_df) <- dimnames(ZFOBLONG_df)[[2]]
+
+# 3 1174
+ZFDOME_df <- select(schier_all_df, contains("ZFDOME"))
+rownames(ZFDOME_df) <- all_rownames
+colnames(ZFDOME_df) <- dimnames(ZFDOME_df)[[2]]
+
+# 4 1506
+ZF30_df <- select(schier_all_df, contains("ZF30"))
+rownames(ZF30_df) <- all_rownames
+colnames(ZF30_df) <- dimnames(ZF30_df)[[2]]
+
+# 5 5864 
+ZF50_df <- select(schier_all_df, contains("ZF50"))
+rownames(ZF50_df) <- all_rownames
+colnames(ZF50_df) <- dimnames(ZF50_df)[[2]]
+
+# 6 1046
+ZFS_df <- select(schier_all_df, contains("ZFS"))
+rownames(ZFS_df) <- all_rownames
+colnames(ZFS_df) <- dimnames(ZFS_df)[[2]]
+
+# 7 4201
+ZF60_df <- select(schier_all_df, contains("ZF60"))
+rownames(ZF60_df) <- all_rownames
+colnames(ZF60_df) <- dimnames(ZF60_df)[[2]]
+
+# 8 6324
+ZF75_df <- select(schier_all_df, contains("ZF75"))
+rownames(ZF75_df) <- all_rownames
+colnames(ZF75_df) <- dimnames(ZF75_df)[[2]]
+
+# 9 5626
+ZF90_df <- select(schier_all_df, contains("ZF90"))
+rownames(ZF90_df) <- all_rownames
+colnames(ZF90_df) <- dimnames(ZF90_df)[[2]]
+
+# 10 7162
+ZFB_df <- select(schier_all_df, contains("ZFB"))
+rownames(ZFB_df) <- all_rownames
+colnames(ZFB_df) <- dimnames(ZFB_df)[[2]]
+
+# 11 1631
+ZF3S_df <- select(schier_all_df, contains("ZF3S"))
+rownames(ZF3S_df) <- all_rownames
+colnames(ZF3S_df) <- dimnames(ZF3S_df)[[2]]
+
+# 12 4460
+ZF6S_df <- select(schier_all_df, contains("ZF6S"))
+rownames(ZF6S_df) <- all_rownames
+colnames(ZF6S_df) <- dimnames(ZF6S_df)[[2]]
 ```
 
 
 #########   CIONA   ######### 
-## All the 4D raw matrices
+# All 15269 x 737280
+# iniG
 ```{r include=TRUE}
-iniG1_dir <- "/home/pprakriti/Desktop/4D_GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
-iniG1_matrix <- Read10X_h5(test_h5)
+# 1
+iniG1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5"
+iniG1_matrix <- Read10X_h5(iniG1_dir)
+
+# 2
+iniG2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764765_iniG2_raw_gene_bc_matrices_h5.h5"
+iniG2_matrix <- Read10X_h5(iniG2_dir)
 ```
+
+# midG
+```{r include=TRUE}
+# 3
+midG1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764766_midG1_raw_gene_bc_matrices_h5.h5"
+midG1_matrix <- Read10X_h5(midG1_dir)
+
+# 4
+midG2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764767_midG2_raw_gene_bc_matrices_h5.h5"
+midG2_matrix <- Read10X_h5(midG2_dir)
+```
+
+# earN
+```{r include=TRUE}
+# 5
+earN1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764768_earN1_raw_gene_bc_matrices_h5.h5"
+earN1_matrix <- Read10X_h5(earN1_dir)
+
+# 6
+earN2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764769_earN2_raw_gene_bc_matrices_h5.h5"
+earN2_matrix <- Read10X_h5(earN2_dir)
+```
+
+# latN
+```{r include=TRUE}
+# 7
+latN1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764770_latN1_raw_gene_bc_matrices_h5.h5"
+latN1_matrix <- Read10X_h5(latN1_dir)
+
+# 8
+latN2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764771_latN2_raw_gene_bc_matrices_h5.h5"
+latN2_matrix <- Read10X_h5(latN2_dir)
+```
+
+# iniT1
+```{r include=TRUE}
+# 9
+iniTI1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764772_iniTI1_raw_gene_bc_matrices_h5.h5"
+iniTI1_matrix <- Read10X_h5(iniTI1_dir)
+
+# 10
+iniTI2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764773_iniTI2_raw_gene_bc_matrices_h5.h5"
+iniTI2_matrix <- Read10X_h5(iniTI2_dir)
+```
+
+# earT1
+```{r include=TRUE}
+# 11
+earTI1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764774_earTI1_raw_gene_bc_matrices_h5.h5"
+earTI1_matrix <- Read10X_h5(earTI1_dir)
+
+# 12
+earTI2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764775_earTI2_raw_gene_bc_matrices_h5.h5"
+earTI2_matrix <- Read10X_h5(earTI2_dir)
+```
+
+# midT2
+```{r include=TRUE}
+# 13
+midTII1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764776_midTII1_raw_gene_bc_matrices_h5.h5"
+midTII1_matrix <- Read10X_h5(midTII1_dir)
+
+# 14
+midTII2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764777_midTII2_raw_gene_bc_matrices_h5.h5"
+midTII2_matrix <- Read10X_h5(midTII2_dir)
+```
+
+# latT1
+```{r include=TRUE}
+# 15
+latTI1a_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764778_latTI1a_raw_gene_bc_matrices_h5.h5"
+latTI1a_matrix <- Read10X_h5(latTI1a_dir)
+
+# 16
+latTI1b_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764782_latTII1b_raw_gene_bc_matrices_h5.h5"
+latTI1b_matrix <- Read10X_h5(latTI1b_dir)
+
+# 17
+latTI2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764780_latTI2_raw_gene_bc_matrices_h5.h5"
+latTI2_matrix <- Read10X_h5(latTI2_dir)
+```
+
+GSM3764781_latTII1a_raw_gene_bc_matrices_h5.h5
+GSM3764782_latTII1b_raw_gene_bc_matrices_h5.h5
+GSM3764783_latTII2_raw_gene_bc_matrices_h5.h5
+
+# latT2
+```{r include=TRUE}
+# 18
+latTII1a_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764781_latTII1a_raw_gene_bc_matrices_h5.h5"
+latTII1a_matrix <- Read10X_h5(latTII1a_dir)
+
+# 19
+latTII1b_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764782_latTII1b_raw_gene_bc_matrices_h5.h5"
+latTII1b_matrix <- Read10X_h5(latTII1b_dir)
+
+# 20
+latTII2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764783_latTII2_raw_gene_bc_matrices_h5.h5"
+latTII2_matrix <- Read10X_h5(latTII2_dir)
+```
+
+# larva
+```{r include=TRUE}
+# 21
+larva1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764784_larva1_raw_gene_bc_matrices_h5.h5"
+larva1_matrix <- Read10X_h5(larva1_dir)
+
+# 22
+larva2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764785_larva2_raw_gene_bc_matrices_h5.h5"
+larva2_matrix <- Read10X_h5(larva2_dir)
+
+# 23
+larva3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764786_larva3_raw_gene_bc_matrices_h5.h5"
+larva3_matrix <- Read10X_h5(larva3_dir)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################################
+
+SCRATCH ZONE
+
+###################################
+
+# Let's get all the unique names for stages
+```{r include=TRUE}
+all_schier_colnames <- unique(unlist(strsplit(colnames(schier_all_df), "_")))
+schier_stage_names <- all_schier_colnames[grepl("ZF", all_schier_colnames)]
+```
+
+# 12 stages Dataframes 
+```{r include=TRUE}
+all_rownames <- rownames(ZFHIGH_df)
+
+# 311
+ZFHIGH_df <- select(schier_all_df, contains("ZFHIGH"))
+colnames(ZFHIGH_df) <- dimnames(ZFHIGH_df)[[2]]
+
+# 200
+ZFOBLONG_df <- select(schier_all_df, contains("ZFOBLONG"))
+rownames(ZFOBLONG_df) <- all_rownames
+colnames(ZFOBLONG_df) <- dimnames(ZFOBLONG_df)[[2]]
+
+# 1174
+ZFDOME_df <- select(schier_all_df, contains("ZFDOME"))
+rownames(ZFDOME_df) <- all_rownames
+colnames(ZFDOME_df) <- dimnames(ZFDOME_df)[[2]]
+
+# 1506
+ZF30_df <- select(schier_all_df, contains("ZF30"))
+rownames(ZF30_df) <- all_rownames
+colnames(ZF30_df) <- dimnames(ZF30_df)[[2]]
+
+# 5864 
+ZF50_df <- select(schier_all_df, contains("ZF50"))
+rownames(ZF50_df) <- all_rownames
+colnames(ZF50_df) <- dimnames(ZF50_df)[[2]]
+
+# 1046
+ZFS_df <- select(schier_all_df, contains("ZFS"))
+rownames(ZFS_df) <- all_rownames
+colnames(ZFS_df) <- dimnames(ZFS_df)[[2]]
+
+# 4201
+ZF60_df <- select(schier_all_df, contains("ZF60"))
+rownames(ZF60_df) <- all_rownames
+colnames(ZF60_df) <- dimnames(ZF60_df)[[2]]
+
+# 6324
+ZF75_df <- select(schier_all_df, contains("ZF75"))
+rownames(ZF75_df) <- all_rownames
+colnames(ZF75_df) <- dimnames(ZF75_df)[[2]]
+
+# 5626
+ZF90_df <- select(schier_all_df, contains("ZF90"))
+rownames(ZF90_df) <- all_rownames
+colnames(ZF90_df) <- dimnames(ZF90_df)[[2]]
+
+# 7162
+ZFB_df <- select(schier_all_df, contains("ZFB"))
+rownames(ZFB_df) <- all_rownames
+colnames(ZFB_df) <- dimnames(ZFB_df)[[2]]
+
+# 1631
+ZF3S_df <- select(schier_all_df, contains("ZF3S"))
+rownames(ZF3S_df) <- all_rownames
+colnames(ZF3S_df) <- dimnames(ZF3S_df)[[2]]
+
+# 4460
+ZF6S_df <- select(schier_all_df, contains("ZF6S"))
+rownames(ZF6S_df) <- all_rownames
+colnames(ZF6S_df) <- dimnames(ZF6S_df)[[2]]
+```
+
 
