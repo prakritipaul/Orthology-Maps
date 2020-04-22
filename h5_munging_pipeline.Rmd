@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # PURPOSE OF PIPELINE: To have/use Chen's raw 4D matrices in Vera
 #                      because Seurat in Vera can't read in h5 files
 #                      so I'm doing h5 reading in Mac and then exporting
-#                      the sparse matrix and its dimnames
+#                      the sparse matrix and its dimnames to Vera.
 
 ```{r pressure, echo=FALSE}
 library(Seurat)
