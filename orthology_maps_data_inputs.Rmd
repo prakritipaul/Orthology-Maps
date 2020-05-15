@@ -6,6 +6,9 @@ output: html_document
 # Purpose of Notebook
 # Import all data needed for Orthology Maps Projects
 
+# Material for initial 24hpf clustering from Klein data is kept.
+# Copy of it Transferred to zeb_24hpf_clustering.Rmd
+
 ## (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
 
 ## (Zebrafish) Schier: 
@@ -32,6 +35,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r include=TRUE}
 library(Seurat)
 library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
 ```
 
 ############  KLEIN ZEBRAFISH ######### 
@@ -319,30 +326,6 @@ larva2_matrix <- Read10X_h5(larva2_dir)
 larva3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764786_larva3_raw_gene_bc_matrices_h5.h5"
 larva3_matrix <- Read10X_h5(larva3_dir)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ###################################

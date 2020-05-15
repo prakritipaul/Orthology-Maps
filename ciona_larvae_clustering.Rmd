@@ -1,0 +1,181 @@
+---
+title: "ciona_larvae_clustering"
+output: html_document
+---
+# First ltb2 clustering (Sanity Check for Batch Correction)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=TRUE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+```
+
+# Markers 
+```{r include=TRUE}
+dopa_markers = c("KH2012:KH.C10.200", "KH2012:KH.C3.666")
+cns_markers = c("KH2012:KH.C14.4", "KH2012:KH.C1.127", "KH2012:KH.C7.59", "KH2012:KH.C6.224")
+noto_markers = c("KH2012:KH.C5.124", "KH2012:KH.C8.749")
+epi_markers = c("KH2012:KH.C1.611", "KH2012:KH.C8.844")
+mes_markers = c("KH2012:KH.C5.228", "KH2012:KH.C5.202", "KH2012:KH.C1.222")
+endo_markers = c("KH2012:KH.C5.227", "KH2012:KH.S1012.1")
+mus_markers = c("KH2012:KH.S423.6", "KH2012:KH.L116.38", "KH2012:KH.C7.504")
+heart_markers = c("KH2012:KH.C7.205")
+```
+
+
+################################################################################################
+
+
+# (1) Make Seurat Objects
+```{r include=TRUE}
+make_ciona_seurat <- function(ciona_df, min_cells, min_features, n_features){
+  ciona_seurat <- CreateSeuratObject(counts = ciona_df,
+                                     min.cells = min_cells, 
+                                     min.features = min_features)
+  ciona_seurat <- NormalizeData(object = ciona_seurat)
+  ciona_seurat <- FindVariableFeatures(ciona_seurat, 
+                                       selection.method = "vst",
+                                       nfeatures = n_features)
+  return(ciona_seurat)
+}
+```
+
+```{r include=TRUE}
+ciona_min_cells <- 3
+ciona_min_features <- 200
+ciona_n_features <- 2000
+```
+
+# I feel sketchy about lat2_2, so I'm going to do MTB
+```{r include=TRUE}
+# 2757
+lat2_1a_seurat <- make_ciona_seurat(latTII1a_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
+
+# 5593
+lat2_1b_seurat <- make_ciona_seurat(latTII1b_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
+
+# 25491
+lat2_2_seurat <- make_ciona_seurat(latTII2_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
+```
+
+# (1) Make MTB Seurats 
+```{r include=TRUE}
+# 5399
+midT2_1_seurat <- make_ciona_seurat(midTII1_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
+
+# 5063
+midT2_2_seurat <- make_ciona_seurat(midTII2_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
+```
+```{r include=TRUE}
+mtb_seurat_list <- list(midT2_1_seurat, midT2_2_seurat)
+```
+
+# Helper Function for (2)
+```{r include=TRUE}
+# ~30 mins
+make_integrated_seurat <- function(object_list, dims, npcs){
+  # Args:
+    # object_list: list of Seurat objects. e.g. zeb_seurat_list.
+    # dims: input dimensions for FindIntegrationAnchors and IntegrateData. 
+    # npcs: # pcs for PCA and TSNE.
+  
+  # Routine: Do integration. Scale, PCA, TSNE.
+  
+  # Returns:
+    # integrated_seurat: output of above routine.
+  
+  zeb_anchors <- FindIntegrationAnchors(object.list = object_list,
+                                      dims = 1:dims)
+  zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:dims)
+  
+  DefaultAssay(zeb_integrated) <- "integrated"
+  
+  zeb_integrated <- ScaleData(zeb_integrated, verbose = FALSE)
+  zeb_integrated <- RunPCA(zeb_integrated, npcs = npcs, verbose = FALSE)
+  zeb_integrated <- RunTSNE(zeb_integrated, dims = 1:npcs)
+  
+  return(zeb_integrated)
+}
+```
+
+# (2) Batch Correct Values in Integrated Seurat Object
+# 15
+```{r include=TRUE}
+mtb_integrated_15 <- make_integrated_seurat(mtb_seurat_list,
+                                         dims = 15,
+                                         npcs = 15)
+```
+# 15- Visualize before Clustering
+```{r include=TRUE}
+DimPlot(mtb_integrated_15, 
+        reduction = "tsne",
+        label = FALSE)
+```
+
+# (3) Perform clustering + Visualize
+# 15
+```{r include=TRUE}
+mtb_integrated_15 <- FindNeighbors(mtb_integrated_15, dims = 1:15)
+mtb_integrated_15 <- FindClusters(mtb_integrated_15, resolution = 1)
+```
+# 15
+```{r include=TRUE}
+DimPlot(mtb_integrated_15, 
+        reduction = "tsne",
+        label = FALSE)
+```
+
+# (4) Map tissues
+# 15- too many clusters, but perfectly clear! <3 
+```{r include=TRUE}
+
+FeaturePlot(object = mtb_integrated_15,
+            features = heart_markers,
+            reduction = "tsne",
+            label = FALSE)
+```
+"""
+Just try 10 (closer to dimensionality)
+"""
+# 10
+```{r include=TRUE}
+mtb_integrated_10 <- make_integrated_seurat(mtb_seurat_list,
+                                         dims = 10,
+                                         npcs = 10)
+```
+```{r include=TRUE}
+DimPlot(mtb_integrated_10, 
+        reduction = "tsne",
+        label = FALSE)
+```
+# (3) Perform clustering + Visualize
+# 10
+```{r include=TRUE}
+mtb_integrated_10 <- FindNeighbors(mtb_integrated_10, dims = 1:10)
+mtb_integrated_10 <- FindClusters(mtb_integrated_10, resolution = 1)
+```
+
+# 10
+```{r include=TRUE}
+DimPlot(mtb_integrated_10, 
+        reduction = "tsne",
+        label = FALSE)
+```
+
+# (4) Map tissues
+# 10- perfect!
+```{r include=TRUE}
+
+FeaturePlot(object = mtb_integrated_10,
+            features = cns_markers,
+            reduction = "tsne",
+            label = FALSE)
+```
+

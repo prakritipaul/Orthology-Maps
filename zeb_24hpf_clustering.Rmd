@@ -1,0 +1,626 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# This notebook follows from orthology_maps_data_inputs.Rmd, where I first began clustering klein's 24hpf data.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=TRUE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+```
+
+############  KLEIN ZEBRAFISH ######### 
+
+# Extract individual Raw UMI-filtered counts (csv). Example below. 
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067195
+# GSM3067195_24hpf.csv.gz
+
+# [LOC100000009 x DEW050_GTCTCTCT_AGGAGCTT]
+# 30677 x *
+```{r include=TRUE}
+zeb_24hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067195_24hpf.csv" 
+
+# 7970
+zeb_24hpf_df <- read.table(zeb_24hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+# Clean up the dataframe
+rownames(zeb_24hpf_df) <- zeb_24hpf_df$Row
+zeb_24hpf_df$Row <- NULL
+```
+
+# Helper Function to make above raw matrix data frames
+```{r include=TRUE}
+make_zeb_df <- function(zeb_dir) {
+  zeb_df <- read.table(zeb_dir,
+                       sep = ",",
+                       header = TRUE,
+                       stringsAsFactors = FALSE)
+  
+  rownames(zeb_df) <- zeb_df$Row
+  zeb_df$Row <- NULL
+  
+  return(zeb_df)
+}
+```
+
+"""
+Make raw matrix data frames from the other cells
+"""
+
+# T = 34750 (exactly what is reported in Fig S2B)
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067196,  
+```{r include=TRUE}
+zeb_t1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067196_TracerSeq1.csv"
+# 5752
+zeb_t1_24hpf_df <- make_zeb_df(zeb_t1_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067197,
+```{r include=TRUE}
+zeb_t2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067197_TracerSeq2.csv"
+# 8874
+zeb_t2_24hpf_df <- make_zeb_df(zeb_t2_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067198,
+```{r include=TRUE}
+zeb_t3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067198_TracerSeq3.csv"
+# 2861
+zeb_t3_24hpf_df <- make_zeb_df(zeb_t3_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067199,
+```{r include=TRUE}
+zeb_t4_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067199_TracerSeq4.csv"
+# 6495
+zeb_t4_24hpf_df <- make_zeb_df(zeb_t4_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067200
+```{r include=TRUE}
+zeb_t5_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067200_TracerSeq5.csv"
+# 2844
+zeb_t5_24hpf_df <- make_zeb_df(zeb_t5_dir)
+```
+
+"""
+Let's pool all the data together and batch correct raw matrix values
+"""
+
+# https://satijalab.org/seurat/v3.1/integration.html
+# (1) Perform standard pre-processing steps on each Seurat object.
+```{r include=TRUE}
+make_zeb_seurat <- function(zeb_df, min_cells, min_features, n_features){
+  zeb_seurat <- CreateSeuratObject(counts = zeb_df,
+                                   min.cells = min_cells, 
+                                   min.features = min_features)
+  
+  zeb_seurat <- NormalizeData(object = zeb_seurat)
+  
+  zeb_seurat <- FindVariableFeatures(zeb_seurat, 
+                                     selection.method = "vst",
+                                     nfeatures = n_features)
+  return(zeb_seurat)
+  }
+```
+
+# (2) Make the individual Seurat Objects
+```{r include=TRUE}
+zeb_min_cells <- 0
+zeb_min_features <- 200
+zeb_n_features <- 2000
+
+zeb_24hpf_seurat <- make_zeb_seurat(zeb_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+```
+
+```{r include=TRUE}
+zeb_t1_24hpf_seurat <- make_zeb_seurat(zeb_t1_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t2_24hpf_seurat <- make_zeb_seurat(zeb_t2_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t3_24hpf_seurat <- make_zeb_seurat(zeb_t3_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t4_24hpf_seurat <- make_zeb_seurat(zeb_t4_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t5_24hpf_seurat <- make_zeb_seurat(zeb_t5_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+```
+# (3) Integration Anchors
+```{r include=TRUE}
+zeb_seurat_list <- list(zeb_24hpf_seurat, zeb_t1_24hpf_seurat, zeb_t2_24hpf_seurat, zeb_t3_24hpf_seurat, zeb_t4_24hpf_seurat, zeb_t5_24hpf_seurat)
+```
+
+```{r include=TRUE}
+# ~30 mins
+zeb_anchors <- FindIntegrationAnchors(object.list = zeb_seurat_list,
+                                      dims = 1:30)
+```
+```{r include=TRUE}
+zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:30)
+```
+
+"""
+Do PCA, TSNE< clustering...
+"""
+
+# (1) Visualize tSNE results
+```{r include=TRUE}
+DefaultAssay(zeb_integrated) <- "integrated"
+
+# Run the standard workflow for visualization and clustering
+zeb_integrated <- ScaleData(zeb_integrated, verbose = FALSE)
+zeb_integrated <- RunPCA(zeb_integrated, npcs = 70, verbose = FALSE)
+zeb_integrated <- RunTSNE(zeb_integrated, dims = 1:70)
+
+```
+
+```{r include=TRUE}
+DimPlot(zeb_integrated, 
+        reduction = "tsne",
+        label = FALSE)
+```
+
+# (2) Perform clustering + Visualize
+```{r include=TRUE}
+zeb_integrated <- FindNeighbors(zeb_integrated, dims = 1:70)
+zeb_integrated <- FindClusters(zeb_integrated, resolution = 2.05)
+```
+
+```{r include=TRUE}
+DimPlot(zeb_integrated, 
+        reduction = "tsne",
+        label = TRUE)
+```
+
+"""
+Let's try to map cell types/tissues
+"""
+
+# ZFIN CURATED GENES # 
+```{r include=TRUE}
+# from zfin https://zfin.org/ZFA:0000114
+zfin_heart_genes <- c("myl7", "nppa", "bmp4", "hspb1", "myh6")
+
+zfin_noto_genes <- c("ta", "shha", "col2a1a", "lft1", "col9a2", "angptl6")
+```
+
+# ALL ANDREA MARKERS #
+```{r include=TRUE}
+# Observations for:
+# npcs/TSNE/FindNeighbors = 70; resolution = 4
+
+# heart primordium- 11
+andrea_heart_prim_markers <- c("hand2", "gata5", "gata6")
+
+# noto- no idea. High expression in 19 (etv4). (Maybe 33 using klein_degs)
+andrea_noto_markers <- c("ta", "ndt5", "col2a1a", "clo8a1a", "p4ha1b", "etv4", "col5a3a", "prx")
+
+# No expression.
+andrea_pgc_markers <- c("ddx4", "nanos3", "dnd1", "piwi2", "h1m")
+
+# I think kind of confidently 39 
+andrea_hema_markers <- c("tal1", "lmo2", "spi1b")
+
+# I think 17?
+andrea_tailbud_markers <- c("dlx5a", "hexb", "mgat1b", "ntla", "cyp26a1", "tll1", "eve1", "bmp2a", "tagln3b", "szl", "abcc6a", "CABZ01079764.1", "bambib", "dusp4")
+
+# Completely unclear (no localized expression) 
+andrea_cef_meso_markers <- c("fsta", "foxf2a")
+
+# Maybe 19 (low expression)
+andrea_pharyngeal_markers <- c("nkx2.7", "irx7")
+
+# No expression
+andrea_hepatocyte_markers <- c("fabp10a", "cp", "hmgcra", "fads2", "msmo1")
+
+# 35 (high confidence)
+andrea_pancreas_markers <- c("cdx4")
+
+# 38 v. strong, 17 too 
+andrea_hatching_gland_markers <- c("ctslb", "he1a", "svopl", "tram1", "fam46ba", "cd63", "calrl", "tmprss9", "he1b", "rcv1")
+
+# Unclear. btg2 everywhere.
+andrea_seg_plate_markers <- c("fgf17", "tjp2b", "kazald2", "btg2", "si:ch211-196c10.11", "si:dkey-14o18.1", "par1", "dmrt2a", "meox1", "si:ch211-105d18.8", "si:rp71-36n21.1", "crabp2b", "CU633857.1")
+
+# No expression anywhere
+andrea_heart_general_markers <- c("atp2a2a", "cryba1l1", "fhl2a", "myl7", "tnni1b", "tnnt2a", "vmhc", "cmlc1", "tbx20", "cyp26c1", "crygn2", "mafba", "tnnc1a", "podxl")
+
+# Pax2a good expression in 1.
+andrea_pronephor_markers <- c("foxj1a", "pax2a")
+
+# Everywhere, unclear
+andrea_somites_markers <- c("mef2ca", "ube2h", "fam107b", "xirp2a", "hapln1a", "ctgfa", "si:dkey-117n7.3", "kcnn3", "s1pr5a", "junba", "lama2", "si:ch211-207e19.11", "ckma", "tnnc1b")
+
+# 24/42
+andrea_neural_crest_markers <- c("foxd3", "sox9b", "sox10")
+
+# Unclear, some expression in 0- not in 1 general area though
+andrea_floor_plate_markers <- c("shha", "shhb", "foxj1a", "foxa2")
+
+# v. strong + consistent expression in 13->33+37+46
+andrea_spinal_cord_markers <- c("elavl3", "neurod1", "neurod4", "neurog4", "neurog1")
+
+# v. convincing expression in 3, 27, 43, 29
+andrea_epi_markers <- c("foxi3a", "foxi3b", "myb", "gcm2", "gata2a", "tbx2b", "cyp2k16")
+
+# Could buy that it's 25
+andrea_np_border_markers <- c("crabp2a", "dlx3b")
+
+# Strong 1 (eng2a, pax2a)
+# Nice non-overlapping clusters 32+34 (olig3)
+andrea_brain_markers <- c("eng2a", "her5", "pax2a", "emx3", "rx3", "pax6b", "olig3")
+
+# 27, 43, 3, 29 + strong 17 (same as epi?!)
+andrea_forebrain_markers <- c("gstm", "uck2b", "relnl", "aldh1a3", "barhl1a", "cx43", "arl3l1", "otx2", "foxe3", "foxd1", "nkx2.1a", "zgc:171531", "rx2", "vsx2")
+
+# No expression- completely unclear 
+andrea_newest_somite_markers <- c("ripply1", "mespba", "ripply2", "mespab", "tsc22d2")
+
+# No expression, some in 0
+andrea_early_endo_markers <- c("foxa1", "foxa2", "sox17", "sox32", "mixl1", "prdx5")
+
+# Present in "overlapping" clusters (0, brain cluster, 20+23+28)
+andrea_general_meso_markers <- c("myl10", "myod1", "myog", "myf5", "meox1", "ripply1", "aldh1a2", "ripply2", "mespba", "tbx6", "tbx6l")
+```
+
+# These are recommended markers from Zfin
+```{r include=TRUE}
+zfin_rec_heart <- c("casz1", "comp", "fgf8a", "gata5", "gata6")
+zfin_rec_noto <- c("angptl6", "chad", "col9a2", "col27a1a", "cxcr4b")
+```
+
+# KLEIN DEGS SUPP TABLE 2 #
+```{r include=TRUE}
+noto_50_degs <- c("ntd5", "aplp2", "emilin3a", "pmp22b", "loxl5b", "ta", "si:dkey-12l12.1", "plod1a", "calua", "fstl1b", "fn1a", "LOC100333762", "col2a1a", "serpinh1b", "fxyd1", "LOC100149028", "fstl1a", "col11a1a", "cmn", "col2a1b", "emilin3a", "si:dkey-12l12.1", "loxl5b", "ta", "LOC100333762", "LOC100149028", "ntd5", "fxyd1", "cmn", "pmp22b", "fn1a", "plod1a", "serpinh1b", "calua", "aplp2", "col11a1a", "fstl1a", "col2a1a", "fstl1b", "col2a1b")
+
+# Get unique DEGs for below to tear them apart better
+heart_51_degs <- c("si:dkey-261h17.1", "LOC100331639", "tpm4a", "krt18", "krt8", "pcolcea", "flna", "ftr82", "fn1a", "si:dkey-207j16.2", "rbpms2b", "krt94", "podxl", "myl9b", "LOC563082", "hand2", "colec10", "sfrp5", "fabp11a"	, "si:dkey-261h17.1", "pcolcea", "tmem88b", "krt18", "ftr82", "LOC100331639", "fn1a", "si:dkey-207j16.2", "krt8", "flna", "tpm4a", "rbpms2b", "krt94", "LOC563082", "myl9b", "hand2", "podxl", "colec10", "sfrp5", "fabp11a")
+
+heart_mature_52_degs <- c("tpm4a", "fhl2a", "tnnt2a", "myl7", "tnnc1a")
+
+heart_hox9da_56_degs <- c("si:dkey-261h17.1", "pmp22a", "prrx1a", "reck", "prdm1a", "aldh1a2")
+
+mus_myl10_53_degs <- c("tpm3", "tpm2", "hm:zewp0073", "actc1a", "myl13")
+
+mus_myl1_12_degs <- c("mylz3", "actc1a", "hm:zewp0073", "myl1", "mylpfa", "tpma", "tnnc2", "acta1b", "ckmb", "ckma", "actc1b")
+
+myotome_27_degs <- c("hsp90aa1.1", "hm:zewp0073", "actc1a", "klhl41b", "myog", "pabpc4", "tnni2b.1", "myl1", "hspb1")
+
+panc_prim_4_degs <- c("slc1a4", "pax6b", "anxa4", "slc43a2a", "scg3", "isl1", "tspan7b", "rltgr", "scgn", "nucb2b", "neurod1", "LOC565781", "si:dkey-153k10.9")
+
+pharyn_pouch_28_degs <- c("epcam", "pax1b", "si:dkey-261h17.1", "krt18", "krt8", "egfl6", "etv4", "prdm1a", "cd9b", "nanos1", "alcama", "cfl1l")
+
+endo_26_degs <- c("slc1a4", "pax6b", "anxa4", "slc43a2a", "scg3", "isl1", "tspan7b", "rltgr", "scgn", "nucb2b", "neurod1", "LOC565781", "si:dkey-153k10.9")
+
+epi_ant_29_degs <- c("cfl1l", "epcam", "col1a2", "krt8", "cldn1", "cldni", "postnb", "padi2", "pfn1")
+
+lens_36_degs <- c("fabp11a", "crybb1", "tgfb3", "vcana", "hmx4", "pitx3", "lim2.1")
+
+# Neural Crest
+nc_16_degs <- c("crestin", "sox10", "tspan36", "ctsba", "slc2a15b", "cax1", "slc45a2", "slc2a11b", "pah")
+
+nc_xanth_59_degs <- c("impdh1b", "paics", "gch2", "gmps", "prdx1", "wu:fc46h12", "slc2a11b", "akr1b1", "LOC100536795")
+
+nc_mel_60_degs <- c("atp6v0ca", "atp6v1g1", "gstp1", "tspan36", "LOC103911087", "slc45a2", "si:ch211-102c2.5", "slc37a2",	"tyrp1b")
+
+nc_irid_61_degs <- c("crestin", "gmps", "apoda.1", "si:ch211-243a20.3", "defbl1", "si:dkey-197i20.6", "pnp4a", "impdh1b", "sox10")
+
+nc_grem2_62_degs <- c("pmp22a", "twist1a", "si:dkey-261h17.1", "ednrab", "grem2b", "her6", "grem2", "dlx2a", "npm1a") 
+
+nc_mcamb_63_degs <- c("ednrab", "sox10", "crestin", "foxd3", "tuba8l3", "erbb3b", "pmp22a", "tfap2a", "LOC103910711")
+
+```
+
+# Visualize
+# 30
+```{r include=TRUE}
+zeb_features <- noto_50_degs[1:9]
+
+FeaturePlot(object = zeb_integrated,
+            features = zeb_features,
+            reduction = "tsne",
+            label = FALSE)
+```
+
+# 10- No 
+```{r include=TRUE}
+
+FeaturePlot(object = zeb_integrated_10,
+            features = noto_50_degs[1:9],
+            reduction = "tsne",
+            label = FALSE)
+```
+
+# 50 
+```{r include=TRUE}
+
+FeaturePlot(object = zeb_integrated_50,
+            features = noto_50_degs[1:9],
+            reduction = "tsne",
+            label = FALSE)
+```
+
+# 70
+```{r include=TRUE}
+
+FeaturePlot(object = zeb_integrated_70,
+            features = noto_50_degs[1:9],
+            reduction = "tsne",
+            label = FALSE)
+```
+
+"""
+Do results change/get better with a different batch correction parameters?
+Do tSNE plots look the same?
+Basically, I want to see if changing parameters makes my clustering better or worse.
+"""
+# Helper Function
+```{r include=TRUE}
+# ~30 mins
+make_integrated_seurat <- function(object_list, dims, npcs){
+  # Args:
+    # object_list: list of Seurat objects. e.g. zeb_seurat_list.
+    # dims: input dimensions for FindIntegrationAnchors and IntegrateData. 
+    # npcs: # pcs for PCA and TSNE.
+  
+  # Routine: Do integration. Scale, PCA, TSNE.
+  
+  # Returns:
+    # integrated_seurat: output of above routine.
+  
+  zeb_anchors <- FindIntegrationAnchors(object.list = object_list,
+                                      dims = 1:dims)
+  zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:dims)
+  
+  DefaultAssay(zeb_integrated) <- "integrated"
+  
+  zeb_integrated <- ScaleData(zeb_integrated, verbose = FALSE)
+  zeb_integrated <- RunPCA(zeb_integrated, npcs = npcs, verbose = FALSE)
+  zeb_integrated <- RunTSNE(zeb_integrated, dims = 1:npcs)
+  
+  return(zeb_integrated)
+}
+```
+
+# dims=10, npcs=70
+```{r include=TRUE}
+zeb_integrated_10 <- make_integrated_seurat(zeb_seurat_list, 10, 70)
+```
+
+# dims=50, npcs=70
+```{r include=TRUE}
+zeb_integrated_50 <- make_integrated_seurat(zeb_seurat_list, 50, 70)
+```
+
+# dims=70, npcs=70
+```{r include=TRUE}
+zeb_integrated_70 <- make_integrated_seurat(zeb_seurat_list, 70, 70)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+##### PART 1: CLUSTER ZEB 24HPF DATA #####
+
+# Likely to troubleshoot- pg 3
+
+# Highly variable genes -> Fano factors, then rank all genes by above-Poisson noise statistic
+## Take top 2000 genes
+## Prune list for highly correlated genes and housekeeping/cell-cycle genes.
+## 1) If corr(transcript, any other transcript) > 0.2
+## 2) Ref list for cell cycle + housekeeping + anything > 0.4 corr 
+## 3) Another round of > 0.4 corr pruning
+```{r include=TRUE}
+# Clean up the dataframe
+
+rownames(zeb_24hpf_df) <- zeb_24hpf_df$Row
+zeb_24hpf_df$Row <- NULL
+
+zeb_24_seurat <- CreateSeuratObject(counts = zeb_24hpf_df,
+                                            min.cells = 3, 
+                                            min.features = 200)
+
+zeb_24_seurat <- NormalizeData(object = zeb_24_seurat)
+  
+zeb_24_seurat <- ScaleData(zeb_24_seurat, 
+                        use.umi = TRUE)
+```
+
+```{r include=TRUE}
+zeb_24_seurat <- FindVariableFeatures(zeb_24_seurat, selection.method = "vst", nfeatures = 1000)
+```
+
+# PCA (skip)
+## # PCs ~ compare eigenvalue distribution of cell PCs to that of randomized data   
+
+# Clustering
+## Supp pg 11- get a sense of numbers/cluster neighbors 
+## Local density clustering
+
+## Important points: (skip)
+### Removed 1 cluster with only housekeeping genes
+### If 2 clusters didn't have DEGs -> merge
+
+## 
+```{r include=TRUE}
+zeb_24_seurat <- RunPCA(zeb_24_seurat, 
+                        features = VariableFeatures(object = zeb_24_seurat),
+                        npcs = 70)
+```
+
+```{r include=TRUE}
+zeb_24_seurat <- FindNeighbors(zeb_24_seurat, dims = 1:70)
+zeb_24_seurat <- FindClusters(zeb_24_seurat, resolution = 4)
+zeb_24_seurat <- RunTSNE(zeb_24_seurat, dims = 1:70)
+```
+
+```{r include=TRUE}
+ElbowPlot(zeb_24_seurat)
+```
+
+# Perplexity=30, 1000-5000 iterations! 
+```{r include=TRUE}
+DimPlot(zeb_24_seurat, 
+        reduction = "tsne",
+        label = TRUE)
+```
+
+# KLEIN DEGS SUPP TABLE 2 #
+```{r include=TRUE}
+# From Supp Table 2 
+noto_24_degs <- c("ntd5", "aplp2", "emilin3a", "pmp22b", "loxl5b", "ta", "si:dkey-12l12.1", "plod1a", "calua", "fstl1b", "fn1a", "LOC100333762", "col2a1a", "serpinh1b", "fxyd1", "LOC100149028", "fstl1a", "col11a1a", "cmn", "col2a1b", "emilin3a", "si:dkey-12l12.1", "loxl5b", "ta", "LOC100333762", "LOC100149028", "ntd5", "fxyd1", "cmn", "pmp22b", "fn1a", "plod1a", "serpinh1b", "calua", "aplp2", "col11a1a", "fstl1a", "col2a1a", "fstl1b", "col2a1b")
+
+# heart 24.51
+heart_degs <- c("si:dkey-261h17.1", "LOC100331639", "tpm4a", "krt18", "krt8", "pcolcea", "flna", "ftr82", "fn1a", "si:dkey-207j16.2", "rbpms2b", "krt94", "podxl", "myl9b", "LOC563082", "hand2", "colec10", "sfrp5", "fabp11a"	, "si:dkey-261h17.1", "pcolcea", "tmem88b", "krt18", "ftr82", "LOC100331639", "fn1a", "si:dkey-207j16.2", "krt8", "flna", "tpm4a", "rbpms2b", "krt94", "LOC563082", "myl9b", "hand2", "podxl", "colec10", "sfrp5", "fabp11a")
+
+# heart-mature 52
+#heart_mature_degs
+
+# hert-hox9da 56
+```
+
+# ZFIN CURATED GENES # 
+```{r include=TRUE}
+# from zfin https://zfin.org/ZFA:0000114
+zfin_heart_genes <- c("myl7", "nppa", "bmp4", "hspb1", "myh6")
+
+zfin_noto_genes <- c("ta", "shha", "col2a1a", "lft1", "col9a2", "angptl6")
+```
+
+# ALL ANDREA MARKERS #
+```{r include=TRUE}
+# Observations for:
+# npcs/TSNE/FindNeighbors = 70; resolution = 4
+
+# heart primordium- 11
+andrea_heart_prim_markers <- c("hand2", "gata5", "gata6")
+
+# noto- no idea. High expression in 19 (etv4). (Maybe 33 using klein_degs)
+andrea_noto_markers <- c("ta", "ndt5", "col2a1a", "clo8a1a", "p4ha1b", "etv4", "col5a3a", "prx")
+
+# No expression.
+andrea_pgc_markers <- c("ddx4", "nanos3", "dnd1", "piwi2", "h1m")
+
+# I think kind of confidently 39 
+andrea_hema_markers <- c("tal1", "lmo2", "spi1b")
+
+# I think 17?
+andrea_tailbud_markers <- c("dlx5a", "hexb", "mgat1b", "ntla", "cyp26a1", "tll1", "eve1", "bmp2a", "tagln3b", "szl", "abcc6a", "CABZ01079764.1", "bambib", "dusp4")
+
+# Completely unclear (no localized expression) 
+andrea_cef_meso_markers <- c("fsta", "foxf2a")
+
+# Maybe 19 (low expression)
+andrea_pharyngeal_markers <- c("nkx2.7", "irx7")
+
+# No expression
+andrea_hepatocyte_markers <- c("fabp10a", "cp", "hmgcra", "fads2", "msmo1")
+
+# 35 (high confidence)
+andrea_pancreas_markers <- c("cdx4")
+
+# 38 v. strong, 17 too 
+andrea_hatching_gland_markers <- c("ctslb", "he1a", "svopl", "tram1", "fam46ba", "cd63", "calrl", "tmprss9", "he1b", "rcv1")
+
+# Unclear. btg2 everywhere.
+andrea_seg_plate_markers <- c("fgf17", "tjp2b", "kazald2", "btg2", "si:ch211-196c10.11", "si:dkey-14o18.1", "par1", "dmrt2a", "meox1", "si:ch211-105d18.8", "si:rp71-36n21.1", "crabp2b", "CU633857.1")
+
+# No expression anywhere
+andrea_heart_general_markers <- c("atp2a2a", "cryba1l1", "fhl2a", "myl7", "tnni1b", "tnnt2a", "vmhc", "cmlc1", "tbx20", "cyp26c1", "crygn2", "mafba", "tnnc1a", "podxl")
+
+# Pax2a good expression in 1.
+andrea_pronephor_markers <- c("foxj1a", "pax2a")
+
+# Everywhere, unclear
+andrea_somites_markers <- c("mef2ca", "ube2h", "fam107b", "xirp2a", "hapln1a", "ctgfa", "si:dkey-117n7.3", "kcnn3", "s1pr5a", "junba", "lama2", "si:ch211-207e19.11", "ckma", "tnnc1b")
+
+# 24/42
+andrea_neural_crest_markers <- c("foxd3", "sox9b", "sox10")
+
+# Unclear, some expression in 0- not in 1 general area though
+andrea_floor_plate_markers <- c("shha", "shhb", "foxj1a", "foxa2")
+
+# v. strong + consistent expression in 13->33+37+46
+andrea_spinal_cord_markers <- c("elavl3", "neurod1", "neurod4", "neurog4", "neurog1")
+
+# v. convincing expression in 3, 27, 43, 29
+andrea_epi_markers <- c("foxi3a", "foxi3b", "myb", "gcm2", "gata2a", "tbx2b", "cyp2k16")
+
+# Could buy that it's 25
+andrea_np_border_markers <- c("crabp2a", "dlx3b")
+
+# Strong 1 (eng2a, pax2a)
+# Nice non-overlapping clusters 32+34 (olig3)
+andrea_brain_markers <- c("eng2a", "her5", "pax2a", "emx3", "rx3", "pax6b", "olig3")
+
+# 27, 43, 3, 29 + strong 17 (same as epi?!)
+andrea_forebrain_markers <- c("gstm", "uck2b", "relnl", "aldh1a3", "barhl1a", "cx43", "arl3l1", "otx2", "foxe3", "foxd1", "nkx2.1a", "zgc:171531", "rx2", "vsx2")
+
+# No expression- completely unclear 
+andrea_newest_somite_markers <- c("ripply1", "mespba", "ripply2", "mespab", "tsc22d2")
+
+# No expression, some in 0
+andrea_early_endo_markers <- c("foxa1", "foxa2", "sox17", "sox32", "mixl1", "prdx5")
+
+# Present in "overlapping" clusters (0, brain cluster, 20+23+28)
+andrea_general_meso_markers <- c("myl10", "myod1", "myog", "myf5", "meox1", "ripply1", "aldh1a2", "ripply2", "mespba", "tbx6", "tbx6l")
+```
+
+# Visual Space
+# All Clusters
+```{r include=TRUE}
+DimPlot(zeb_24_seurat, 
+        reduction = "tsne",
+        label = TRUE)
+```
+
+# Individual Tissues 
+```{r include=TRUE}
+zeb_features <- test_noto
+test_heart <- c("casz1", "comp", "fgf8a", "gata5", "gata6")
+test_noto <- c("angptl6", "chad", "col9a2", "col27a1a", "cxcr4b")
+
+FeaturePlot(object = zeb_24_seurat,
+            features = zeb_features,
+            reduction = "tsne",
+            label = TRUE)
+```
+
+
