@@ -1,0 +1,351 @@
+---
+title: "zeb_degs_heatmaps"
+output: html_document
+---
+
+# Follows from zeb_24hpf_clustering.
+# Works in parallel with ciona_larvae_clustering.Rmd
+
+# Uses zeb_integrated_50 Seurat 
+# Uses env_zeb_24hpf_clustering.RData
+
+# For all clusters (from zeb_24hpf_clustering.Rmd):
+# (1) Get cells, (2) Get DEGs, (3) Make top50 vector, (4) Visualize Heatmap 
+
+# Segways into
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=TRUE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+library(MAST)
+```
+
+"""
+Pipeline:
+Get cells -> DEGs -> top50 vector -> Heatmap
+"""
+
+"""
+Helper Functions
+"""
+
+```{r include=TRUE}
+munge_markers <- function(markers){
+  # Given the output of FindMarkers, we get genes whose avg_logFC > 0.5.
+  # These genes are ordered in nondecreasing order of avg_logFC.
+  # We also check that p_val_adj < 0.05
+  #
+  # Args:
+  #   markers: Output of FindMarkers (dataframe)
+  #
+  # Returns:
+  #   munged_markers: munged dataframe of KHIDs
+  munged_markers <- markers
+  munged_markers <- munged_markers[order(-munged_markers$avg_logFC), ]
+  munged_markers <- munged_markers[munged_markers$p_val_adj < 0.05, ]
+
+  return(munged_markers)
+}
+```
+
+# Helper Function to get dataframe top50 genes 
+```{r include=TRUE}
+get_top_n_df <- function(cell_type, seurat_object, test_use, n_top) {
+  # Given a cell type (output of WhichCells), get n_top DEGs using FindMarkers
+  # with test of preference and custom munge_markers function 
+  # (ref docstring with details)
+  #
+  # Args and Returns: Self-explanatory
+  cell_type_markers <- FindMarkers(object = seurat_object,
+                                     ident.1 = cell_type,
+                                     test.use = test_use)
+  
+  munged_cell_type_markers <- munge_markers(cell_type_markers)[1:n_top, ]
+  
+  return(munged_cell_type_markers)
+}
+```
+
+# Test on noto + heart_52
+```{r include=TRUE}
+cell_type_list = list(noto, heart_52)
+cell_type_flags <- c("noto", "heart_52")
+marker_df_list <- list()
+
+for (i in 1:length(cell_type_list)) {
+  cat("Now doing ", i, "=", cell_type_flags[i], "\n\n")
+  marker_df <- get_top_n_df(cell_type_list[[i]], zeb_integrated_50, "MAST", 50)
+  marker_df_list[[cell_type_flags[i]]] <- marker_df
+}
+```
+
+"""
+Chunk 1
+"""
+
+# (1) Get cells (1)
+```{r include=TRUE}
+noto <- WhichCells(zeb_integrated_50, idents = 70) # 1
+
+heart_52 <- WhichCells(zeb_integrated_50, idents = 74) # 2
+heart_51_56 <- WhichCells(zeb_integrated_50, idents = 17) # 3, 4
+
+muscles <- WhichCells(zeb_integrated_50, idents = 37) # 5, 6, 7
+
+panc_prim_endo <- WhichCells(zeb_integrated_50, idents = 73) # 8, 9
+
+ph_arch_cd248b <- WhichCells(zeb_integrated_50, idents = c(34, 21)) # 10
+ph_arch_ndnf <- WhichCells(zeb_integrated_50, idents = 33) # 11 
+
+epi_1 <- WhichCells(zeb_integrated_50, idents = c(52, 31, 65, 14)) 
+epi_2 <- WhichCells(zeb_integrated_50, idents = c(44, 45, 51)) # 23
+
+endothelials <- WhichCells(zeb_integrated_50, idents = c(20, 72)) # 59
+
+tail_spinal_cord <- WhichCells(zeb_integrated_50, idents = 5) # 60
+tail_PSM <- WhichCells(zeb_integrated_50, idents = 36) # 61
+```
+
+# (2) Get DEGs (1)
+```{r include=TRUE}
+cell_type_list_1 = list(noto, heart_52, heart_51_56, muscles, panc_prim_endo, ph_arch_cd248b, ph_arch_ndnf, epi_1, epi_2, endothelials, tail_spinal_cord, tail_PSM)
+
+cell_type_flags_1 = c("noto", "heart_52", "heart_51_56", "muscles", "panc_prim_endo", "ph_arch_cd248b", "ph_arch_ndnf", "epi_1", "epi_2", "endothelials", "tail_spinal_cord", "tail_PSM")
+
+marker_df_list_1 <- list()
+
+for (i in 1:length(cell_type_list_1)) {
+  cat("Now doing ", i, "=", cell_type_flags_1[i], "\n\n")
+  
+  marker_df_1 <- get_top_n_df(cell_type_list_1[[i]], zeb_integrated_50, "MAST", 50)
+  
+  marker_df_list_1[[cell_type_flags_1[i]]] <- marker_df_1
+}
+```
+# (3) Make top50 vector and get all cells (1)
+```{r include=TRUE}
+# Expect sketchy: Epi's, ph's
+cell_type_vector_1 <- c(noto, heart_52, heart_51_56, muscles, panc_prim_endo, ph_arch_cd248b, ph_arch_ndnf, epi_1, epi_2, endothelials, tail_spinal_cord, tail_PSM)
+
+top50_vector_1 <- c(rownames(marker_df_list_1$noto),
+                    rownames(marker_df_list_1$heart_52),
+                    rownames(marker_df_list_1$heart_51_56),
+                    rownames(marker_df_list_1$muscles),
+                    rownames(marker_df_list_1$panc_prim_endo),
+                    rownames(marker_df_list_1$ph_arch_cd248b),
+                    rownames(marker_df_list_1$ph_arch_ndnf),
+                    rownames(marker_df_list_1$epi_1),
+                    rownames(marker_df_list_1$epi_2),
+                    rownames(marker_df_list_1$endothelials),
+                    rownames(marker_df_list_1$tail_spinal_cord),
+                    rownames(marker_df_list_1$tail_PSM))
+
+```
+
+
+# (4) Make Heatmap (1)
+```{r include=TRUE}
+DoHeatmap(object = zeb_integrated_50,
+          features = top50_vector_1,
+          cells = cell_type_vector_1,
+          slot = "data",
+          size = 2)
+```
+
+"""
+Chunk 2: Diff Neurons + NCs
+"""
+
+# (1) Get cells (2)
+```{r include=TRUE}
+diff_neu_hmx1_dlx <- WhichCells(zeb_integrated_50, idents = 28) # 24, 25
+diff_neu_phox2a <- WhichCells(zeb_integrated_50, idents = 54) # 26
+diff_neus <- WhichCells(zeb_integrated_50, idents = c(9, 47, 59, 27, 16, 68, 41)) # 27
+diff_neu_eomesa <- WhichCells(zeb_integrated_50, idents = 32) # 28
+diff_neu_sst1_1 <- WhichCells(zeb_integrated_50, idents = 71) # 29
+diff_neu_rohon_beard <- WhichCells(zeb_integrated_50, idents = 55) # 30
+
+nc_nc_mcamb_irid <- WhichCells(zeb_integrated_50, idents = c(61, 66)) # 47
+nc_xanth_mel <- WhichCells(zeb_integrated_50, idents = 58)
+nc_grem2 <- WhichCells(zeb_integrated_50, idents = 23) # 50
+```
+
+# (2) Get DEGs (2)
+```{r include=TRUE}
+cell_type_list_2 = list(diff_neu_hmx1_dlx, diff_neu_phox2a, diff_neus, diff_neu_eomesa, diff_neu_sst1_1, diff_neu_rohon_beard, nc_nc_mcamb_irid, nc_xanth_mel, nc_grem2)
+
+cell_type_flags_2 = c("diff_neu_hmx1_dlx", "diff_neu_phox2a", "diff_neus", "diff_neu_eomesa", "diff_neu_sst1_1", "diff_neu_rohon_beard", "nc_nc_mcamb_irid", "nc_xanth_mel", "nc_grem2")
+
+marker_df_list_2 <- list()
+
+for (i in 1:length(cell_type_list_2)) {
+  cat("Now doing ", i, "=", cell_type_flags_2[i], "\n\n")
+  
+  marker_df_2 <- get_top_n_df(cell_type_list_2[[i]], zeb_integrated_50, "MAST", 50)
+  
+  marker_df_list_2[[cell_type_flags_2[i]]] <- marker_df_2
+}
+```
+
+# (3) Make top50 vector and get all cells (2)
+```{r include=TRUE}
+cell_type_vector_2 <- c(diff_neu_hmx1_dlx, diff_neu_phox2a, diff_neus, diff_neu_eomesa, diff_neu_sst1_1, diff_neu_rohon_beard, nc_nc_mcamb_irid, nc_xanth_mel, nc_grem2)
+
+top50_vector_2 <- c(rownames(marker_df_list_2$diff_neu_hmx1_dlx),
+                    rownames(marker_df_list_2$diff_neu_phox2a),
+                    rownames(marker_df_list_2$diff_neus),
+                    rownames(marker_df_list_2$diff_neu_eomesa),
+                    rownames(marker_df_list_2$diff_neu_sst1_1),
+                    rownames(marker_df_list_2$diff_neu_rohon_beard),
+                    rownames(marker_df_list_2$nc_nc_mcamb_irid),
+                    rownames(marker_df_list_2$nc_xanth_mel),
+                    rownames(marker_df_list_2$nc_grem2))
+```
+
+# (4) Make Heatmap (2)
+```{r include=TRUE}
+DoHeatmap(object = zeb_integrated_50,
+          features = top50_vector_2,
+          cells = cell_type_vector_2,
+          slot = "data",
+          size = 2)
+```
+
+
+"""
+Chunk 3: Neural 
+"""
+
+# (1) Get cells (3)
+```{r include=TRUE}
+neur_vent_hind <- WhichCells(zeb_integrated_50, idents = c(10, 13, 25, 8, 39, 35)) # 31
+neur_mid <- WhichCells(zeb_integrated_50, idents = c(19, 56, 4, 75, 6, 53, 49))
+neur_dors_spinal_cord <- WhichCells(zeb_integrated_50, idents = c(30, 24))
+neur_dien <- WhichCells(zeb_integrated_50, idents = 22)
+neur_dors_hind <- WhichCells(zeb_integrated_50, idents = c(1, 29, 40))
+neur_hind_roof <- WhichCells(zeb_integrated_50, idents = 62)
+neur_telen <- WhichCells(zeb_integrated_50, idents = 2)
+neur_mid_vent_nkx6_2 <- WhichCells(zeb_integrated_50, idents = 15)
+neur_hind_gsx1 <- WhichCells(zeb_integrated_50, idents = 11)
+neur_post_vent_nkx6_2 <- WhichCells(zeb_integrated_50, idents = 26) # 46
+```
+
+# (2) Get DEGs (3)
+```{r include=TRUE}
+cell_type_list_3 = list(neur_vent_hind, neur_mid, neur_dors_spinal_cord, neur_dien, neur_dors_hind, neur_hind_roof, neur_telen, neur_mid_vent_nkx6_2, neur_hind_gsx1, neur_post_vent_nkx6_2)
+
+cell_type_flags_3 = c("neur_vent_hind", "neur_mid", "neur_dors_spinal_cord", "neur_dien", "neur_dors_hind", "neur_hind_roof", "neur_telen", "neur_mid_vent_nkx6_2", "neur_hind_gsx1", "neur_post_vent_nkx6_2")
+
+marker_df_list_3 <- list()
+
+for (i in 1:length(cell_type_list_3)) {
+  cat("Now doing ", i, "=", cell_type_flags_3[i], "\n\n")
+  
+  marker_df_3 <- get_top_n_df(cell_type_list_3[[i]], zeb_integrated_50, "MAST", 50)
+  
+  marker_df_list_3[[cell_type_flags_3[i]]] <- marker_df_3
+}
+```
+
+# (3) Make top50 vector and get all cells (3)
+```{r include=TRUE}
+cell_type_vector_3 <- c(neur_vent_hind, neur_mid, neur_dors_spinal_cord, neur_dien, neur_dors_hind, neur_hind_roof, neur_telen, neur_mid_vent_nkx6_2, neur_hind_gsx1, neur_post_vent_nkx6_2)
+
+top50_vector_3 <- c(rownames(marker_df_list_3$neur_vent_hind),
+                    rownames(marker_df_list_3$neur_mid),
+                    rownames(marker_df_list_3$neur_dors_spinal_cord),
+                    rownames(marker_df_list_3$neur_dien),
+                    rownames(marker_df_list_3$neur_dors_hind),
+                    rownames(marker_df_list_3$neur_hind_roof),
+                    rownames(marker_df_list_3$neur_telen),
+                    rownames(marker_df_list_3$neur_mid_vent_nkx6_2),
+                    rownames(marker_df_list_3$neur_hind_gsx1),
+                    rownames(marker_df_list_3$neur_post_vent_nkx6_2))
+
+```
+
+
+# (4) Make Heatmap (3)
+```{r include=TRUE}
+DoHeatmap(object = zeb_integrated_50,
+          features = top50_vector_3,
+          cells = cell_type_vector_3,
+          slot = "data",
+          size = 2)
+```
+
+"""
+Chunk 4
+"""
+```{r include=TRUE}
+lens <- WhichCells(zeb_integrated_50, idents = 57) # 51
+optic_cup <- WhichCells(zeb_integrated_50, idents = c(12, 7, 3, 43))
+rpe <- WhichCells(zeb_integrated_50, idents = 63) 
+otic_plac <- WhichCells(zeb_integrated_50, idents = 60) # 54
+
+iono <- WhichCells(zeb_integrated_50, idents = 64) # 55
+leuko <- WhichCells(zeb_integrated_50, idents = 67) 
+eryth <- WhichCells(zeb_integrated_50, idents = c(0, 18, 50))
+macro <- WhichCells(zeb_integrated_50, idents = 48) # 58
+
+meso <- WhichCells(zeb_integrated_50, idents = 46) # 62
+peri <- WhichCells(zeb_integrated_50, idents = 42)
+latline <- WhichCells(zeb_integrated_50, idents = 69)
+pec_fin_bud <- WhichCells(zeb_integrated_50, idents = 38) # 65
+
+```
+
+```{r include=TRUE}
+cell_type_list_4 = list(lens, optic_cup, rpe, otic_plac, iono, leuko, eryth, macro, meso, peri, latline, pec_fin_bud)
+
+cell_type_flags_4 = c("lens", "optic_cup", "rpe", "otic_plac", "iono", "leuko", "eryth", "macro", "meso", "peri", "latline", "pec_fin_bud")
+
+marker_df_list_4 <- list()
+
+for (i in 1:length(cell_type_list_4)) {
+  cat("Now doing ", i, "=", cell_type_flags_4[i], "\n\n")
+  
+  marker_df_4 <- get_top_n_df(cell_type_list_4[[i]], zeb_integrated_50, "MAST", 50)
+  
+  marker_df_list_4[[cell_type_flags_4[i]]] <- marker_df_4
+}
+```
+
+# (3) Make top50 vector and get all cells (4)
+```{r include=TRUE}
+cell_type_vector_4 <- c(lens, optic_cup, rpe, otic_plac, iono, leuko, eryth, macro, meso, peri, latline, pec_fin_bud)
+
+top50_vector_4 <- c(rownames(marker_df_list_4$lens),
+                    rownames(marker_df_list_4$optic_cup),
+                    rownames(marker_df_list_4$rpe),
+                    rownames(marker_df_list_4$otic_plac),
+                    rownames(marker_df_list_4$iono),
+                    rownames(marker_df_list_4$leuko),
+                    rownames(marker_df_list_4$eryth),
+                    rownames(marker_df_list_4$macro),
+                    rownames(marker_df_list_4$meso),
+                    rownames(marker_df_list_4$peri),
+                    rownames(marker_df_list_4$latline),
+                    rownames(marker_df_list_4$pec_fin_bud))
+
+```
+
+
+# (4) Make Heatmap (4)
+```{r include=TRUE}
+DoHeatmap(object = zeb_integrated_50,
+          features = top50_vector_4,
+          cells = cell_type_vector_4,
+          slot = "data",
+          size = 2)
+```
+
