@@ -13,10 +13,6 @@ output: html_document
 # Tissue Mapping
 # (1) Get Cells (2) Get DEGs (3) Make top50 vectors (4) Heatmaps
 
-## TO DO:
-# 1) Abnormally many cells in larva1 ~23k
-# 2) Check if batch correction occurred correctly
-# 3) Crab looks messed up- reminiscent of past Nodal stuff. Fix clustering + PCA 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -46,7 +42,9 @@ heart_markers = c("KH2012:KH.C7.205")
 
 ################################################################################################
 
-# (1) Make Seurat Objects
+"""
+Helper Function: Make Seurat Object and Find n_features Variable Genes
+"""
 ```{r include=TRUE}
 make_ciona_seurat <- function(ciona_df, min_cells, min_features, n_features){
   ciona_seurat <- CreateSeuratObject(counts = ciona_df,
@@ -61,73 +59,225 @@ make_ciona_seurat <- function(ciona_df, min_cells, min_features, n_features){
 }
 ```
 
-# CHEN CIONA SEURAT
-# CHANGE BETWEEN CHEN_LARVA1 AND CHEN_CIONA
+"""
+-First 3 variables were used to make larva*_seurats
+-chen_ciona_min_cells, chen_min/max_features same for chen_larva*_seurats
+-chen_max_features_ depend on nGene distributions for each larva*_seurat_1/2 
+came from mean and sd of corresponding larva seurats 
+"""
 ```{r include=TRUE}
 ciona_min_cells <- 3
 ciona_min_features <- 200
 ciona_n_features <- 2000
 
 chen_ciona_min_cells <- 3
-# 1000 for chen_larva1_seurat
-# 1400 for chen_ciona_seurat
 chen_min_features <- 1000
-# mean = 1410
-chen_max_features <- 1410*5
-```
+chen_max_features <- 5000
 
+# unused 
+chen_max_features_1 <- 528+5*705
+chen_max_features_2 <- 1002+5*1012
+```
 
 # (1) Make Larva Seurats
 ```{r include=TRUE}
 # 28234
 larva1_seurat <- make_ciona_seurat(larva1_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-
 # 12406
 larva2_seurat <- make_ciona_seurat(larva2_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
 # 7144
 larva3_seurat <- make_ciona_seurat(larva3_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
 ```
-# Correctly using Chen's 4D filters  
+
+"""
+Look at Larva* Distributions 
+"""
 ```{r include=TRUE}
-# 3878
+density_testing_seurat <- chen_larva3_seurat_scaled
+var_features <- chen_larva3_seurat_scaled@assays$RNA@var.features
+
+# var_features[1:10]
+VlnPlot(object = density_testing_seurat, features = c("nFeature_RNA", "nCount_RNA"))
+```
+
+```{r include=TRUE}
+n_count_density <- density(density_testing_seurat$nCount_RNA)
+n_feats <- density_testing_seurat$nFeature_RNA
+n_feat_density <- density(n_feats)
+
+n_feat_density
+plot(n_feat_density)
+
+cat("mean = ", mean(n_feats), "\n\n")
+cat("sd = ", sd(n_feats), "\n\n")
+cat("5 sd's above mean = ", mean(n_feats)+sd(n_feats)*5)
+```
+
+"""
+Now subset based on chen_max_features -> chen_larva_seurat
+"""
+
+```{r include=TRUE}
 chen_larva1_seurat <- subset(larva1_seurat, subset = nFeature_RNA > chen_min_features & nFeature_RNA < chen_max_features)
 ```
 
-# Make chen_larva1_seurat from scratch
-# CHEN CIONA SEURAT 
 ```{r include=TRUE}
-# chen_ciona_min_cells <- 3
-# chen_min_features <- 1000
+chen_larva2_seurat <- subset(larva2_seurat, subset = nFeature_RNA > chen_min_features & nFeature_RNA < chen_max_features)
+```
 
-# Use below for subsetting down the line
-# # mean = 1410
-# chen_max_features <- 1410*5
+```{r include=TRUE}
+chen_larva3_seurat <- subset(larva3_seurat, subset = nFeature_RNA > chen_min_features & nFeature_RNA < chen_max_features)
+```
 
-chen_ciona_seurat <- CreateSeuratObject(counts = larva1_matrix,
-                                     min.cells = chen_ciona_min_cells, 
-                                     min.features = chen_min_features)
-  
-  chen_ciona_seurat <- NormalizeData(object = chen_ciona_seurat)
-  chen_ciona_seurat <- FindVariableFeatures(chen_ciona_seurat, 
-                                       selection.method = "vst",
-                                       nfeatures = 1000)
+"""
+Add MetaData that reflects batch #
+"""
+```{r include=TRUE}
+chen_len_1 <- length(colnames(x = chen_larva1_seurat))
+metadata_1 <- rep("larva1", chen_len_1)
+
+chen_larva1_seurat$larva_batch <- metadata_1
+chen_larva1_seurat_scaled$larva_batch <- metadata_1
+
+# 2
+chen_len_2 <- length(colnames(x = chen_larva2_seurat))
+metadata_2 <- rep("larva2", chen_len_2)
+
+chen_larva2_seurat$larva_batch <- metadata_2
+chen_larva2_seurat_scaled$larva_batch <- metadata_2
+
+# 3
+chen_len_3 <- length(colnames(x = chen_larva3_seurat))
+metadata_3 <- rep("larva3", chen_len_3)
+
+chen_larva3_seurat$larva_batch <- metadata_3
+chen_larva3_seurat_scaled$larva_batch <- metadata_3
 
 ```
 
-# Correctly using Chen's 4D filters 
-# CHEN CIONA SEURAT 
+"""
+Scale, PCA, TSNE 
+"""
 ```{r include=TRUE}
-# 3878
-chen_ciona_seurat <- subset(chen_ciona_seurat, subset = nFeature_RNA > chen_min_features & nFeature_RNA < chen_max_features)
+ElbowPlot(chen_larva3_seurat_scaled)
 ```
 
-##### DO NOT TOUCH ######
 ```{r include=TRUE}
-larva_seurat_list <- list(larva1_seurat, larva2_seurat, larva3_seurat)
+chen_larva1_seurat_scaled <- chen_larva1_seurat
+
+chen_larva1_seurat_scaled <- ScaleData(chen_larva1_seurat_scaled)
+
+chen_larva1_seurat_scaled <- RunPCA(chen_larva1_seurat_scaled, npcs = 10, verbose = FALSE)
+chen_larva1_seurat_scaled <- RunTSNE(chen_larva1_seurat_scaled, npcs = 10, verbose = FALSE)
 ```
 
-##### DO NOT TOUCH ######
-# Helper Function for (2)
+```{r include=TRUE}
+chen_larva2_seurat_scaled <- chen_larva2_seurat
+
+chen_larva2_seurat_scaled <- ScaleData(chen_larva2_seurat_scaled)
+
+chen_larva2_seurat_scaled <- RunPCA(chen_larva2_seurat_scaled, npcs = 10, verbose = FALSE)
+chen_larva2_seurat_scaled <- RunTSNE(chen_larva2_seurat_scaled, npcs = 10, verbose = FALSE)
+```
+
+```{r include=TRUE}
+chen_larva3_seurat_scaled <- chen_larva3_seurat
+
+chen_larva3_seurat_scaled <- ScaleData(chen_larva3_seurat_scaled)
+
+chen_larva3_seurat_scaled <- RunPCA(chen_larva3_seurat_scaled, npcs = 10, verbose = FALSE)
+chen_larva3_seurat_scaled <- RunTSNE(chen_larva3_seurat_scaled, npcs = 10, verbose = FALSE)
+```
+
+"""
+Cluster + Map Tissues
+"""
+```{r include=TRUE}
+chen_larva1_seurat_scaled <- FindNeighbors(chen_larva1_seurat_scaled, dims = 1:10)
+chen_larva1_seurat_scaled <- FindClusters(chen_larva1_seurat_scaled, resolution = 1)
+```
+
+```{r include=TRUE}
+chen_larva2_seurat_scaled <- FindNeighbors(chen_larva2_seurat_scaled, dims = 1:10)
+chen_larva2_seurat_scaled <- FindClusters(chen_larva2_seurat_scaled, resolution = 0.5)
+```
+
+```{r include=TRUE}
+chen_larva3_seurat_scaled <- FindNeighbors(chen_larva3_seurat_scaled, dims = 1:10)
+chen_larva3_seurat_scaled <- FindClusters(chen_larva3_seurat_scaled, resolution = 0.5)
+```
+
+"""
+Visualize + Map Tissues
+"""
+```{r include=TRUE}
+DimPlot(chen_larva2_seurat_scaled, 
+        reduction = "tsne",
+        label = TRUE)
+```
+
+```{r include=TRUE}
+
+FeaturePlot(object = chen_larva3_seurat_scaled,
+            features = endo_markers,
+            reduction = "tsne",
+            label = TRUE)
+```
+
+"""
+Figure out which clusters you will throw away
+"""
+```{r include=TRUE}
+table(Idents(chen_larva1_seurat_scaled))
+```
+
+"""
+Create "Clean Seurat Objects" from chen_larva*_seurats (Not scaled!) that lack above clusters
+"""
+# 1
+```{r include=TRUE}
+cells_to_remove_1 <- WhichCells(chen_larva1_seurat_scaled,
+                                idents = 3)
+
+cells_to_keep_1 <- setdiff(colnames(chen_larva1_seurat_scaled), cells_to_remove_1)
+
+clean_chen_larva1_seurat <- subset(chen_larva1_seurat,
+                                   cells = cells_to_keep_1)
+```
+
+# 2
+```{r include=TRUE}
+cells_to_remove_2 <- WhichCells(chen_larva2_seurat_scaled,
+                                idents = c(6, 13))
+
+cells_to_keep_2 <- setdiff(colnames(chen_larva2_seurat_scaled), cells_to_remove_2)
+
+clean_chen_larva2_seurat <- subset(chen_larva2_seurat,
+                                   cells = cells_to_keep_2)
+```
+
+# 3
+```{r include=TRUE}
+cells_to_remove_3 <- WhichCells(chen_larva3_seurat_scaled,
+                                idents = c(12, 14, 15, 16, 18))
+
+cells_to_keep_3 <- setdiff(colnames(chen_larva3_seurat_scaled), cells_to_remove_3)
+
+clean_chen_larva3_seurat <- subset(chen_larva3_seurat,
+                                   cells = cells_to_keep_3)
+```
+
+"""
+Let's now proceed with Batch Correction Procedure
+"""
+
+```{r include=TRUE}
+clean_chen_larva_list <- list(clean_chen_larva1_seurat, clean_chen_larva2_seurat, clean_chen_larva3_seurat)
+```
+
+"""
+Helper Function for Integration 
+"""
 ```{r include=TRUE}
 # ~30 mins
 make_integrated_seurat <- function(object_list, dims){
@@ -153,268 +303,58 @@ make_integrated_seurat <- function(object_list, dims){
 }
 ```
 
-
-##### DO NOT TOUCH ######
-# (2) Batch Correct Values in Integrated Seurat Object
-# 20 anchors
+"""
+Pick #Anchors (20)
+"""
 ```{r include=TRUE}
-larva_integrated_20 <- make_integrated_seurat(larva_seurat_list, 20)
+# ~6 mins
+clean_chen_larva_integrated_20 <- make_integrated_seurat(clean_chen_larva_list, 20)
 ```
 
-# 15- Do PCA, tSNE, then Visualize
+"""
+Perform PCA, TSNE
+"""
 ```{r include=TRUE}
-density_testing_seurat <- chen_larva1_seurat_scaled
-VlnPlot(object = density_testing_seurat, features = c("nFeature_RNA", "nCount_RNA"))
-```
-
-```{r include=TRUE}
-n_count_density <- density(density_testing_seurat$nCount_RNA)
-n_feat_density <- density(density_testing_seurat$nFeature_RNA)
-
-n_feat_density
-plot(n_feat_density)
-```
-
-##### DO NOT TOUCH ######
-```{r include=TRUE}
-ElbowPlot(larva_integrated_20)
-```
-
-##### DO NOT TOUCH ######
-# (3) PCA, tSNE
-```{r include=TRUE}
-npcs <- 30
-larva_integrated_20 <- RunPCA(larva_integrated_20, npcs = npcs, verbose = FALSE)
-larva_integrated_20 <- RunTSNE(larva_integrated_20, dims = 1:npcs)
+npcs <- 15
+clean_chen_larva_integrated_20 <- RunPCA(clean_chen_larva_integrated_20, npcs = npcs, verbose = FALSE)
+clean_chen_larva_integrated_20 <- RunTSNE(clean_chen_larva_integrated_20, dims = 1:npcs)
 ```
 
 ```{r include=TRUE}
-larva1_seurat_scaled <- larva1_seurat
-larva1_seurat_scaled <- ScaleData(larva1_seurat_scaled)
-
-larva1_seurat_scaled <- RunPCA(larva1_seurat_scaled, npcs = npcs, verbose = FALSE)
-larva1_seurat_scaled <- RunTSNE(larva1_seurat_scaled, npcs = npcs, verbose = FALSE)
+ElbowPlot(clean_chen_larva_integrated_20)
 ```
 
-# Chen Larva1
+"""
+Ensure that Batch Correction worked
+"""
 ```{r include=TRUE}
-chen_larva1_seurat_scaled <- chen_larva1_seurat
-chen_larva1_seurat_scaled <- ScaleData(chen_larva1_seurat_scaled)
+# Beautiful!
+DimPlot(clean_chen_larva_integrated_20, 
+        reduction = "tsne",
+        label = TRUE,
+        group.by = "larva_batch")
 ```
 
-# CHEN CIONA SEURAT
+"""
+Visualize + Map Tissues
+"""
 ```{r include=TRUE}
-chen_ciona_seurat <- ScaleData(chen_ciona_seurat)
-chen_ciona_seurat <- RunPCA(chen_ciona_seurat, npcs = 15, verbose = FALSE)
-chen_ciona_seurat <- RunTSNE(chen_ciona_seurat, npcs = 15, verbose = FALSE)
-```
-
-```{r include=TRUE}
-ElbowPlot(chen_larva1_seurat_scaled)
-```
-
-```{r include=TRUE}
-chen_larva1_seurat_scaled <- RunPCA(chen_larva1_seurat_scaled, npcs = 5, verbose = FALSE)
-chen_larva1_seurat_scaled <- RunTSNE(chen_larva1_seurat_scaled, npcs = 5, verbose = FALSE)
-```
-
-# Clustering 
-```{r include=TRUE}
-chen_larva1_seurat_scaled <- FindNeighbors(chen_larva1_seurat_scaled, dims = 1:5)
-chen_larva1_seurat_scaled <- FindClusters(chen_larva1_seurat_scaled, resolution = 1)
-```
-
-# CHEN CIONA SEURAT
-```{r include=TRUE}
-chen_ciona_seurat <- FindNeighbors(chen_ciona_seurat, dims = 1:15)
-chen_ciona_seurat <- FindClusters(chen_ciona_seurat, resolution = 1)
+clean_chen_larva_integrated_20 <- FindNeighbors(clean_chen_larva_integrated_20, dims = 1:15)
+clean_chen_larva_integrated_20 <- FindClusters(clean_chen_larva_integrated_20, resolution = 1)
 ```
 
 ```{r include=TRUE}
-DimPlot(chen_larva1_seurat_scaled, 
+DimPlot(clean_chen_larva_integrated_20, 
         reduction = "tsne",
         label = TRUE)
 ```
 
-# Map Tissues
 ```{r include=TRUE}
 
-FeaturePlot(object = chen_larva1_seurat_scaled,
-            features = cns_markers,
-            reduction = "tsne",
-            label = TRUE)
-```
-
-```{r include=TRUE}
-
-FeaturePlot(object = chen_larva1_seurat_scaled,
-            features = mus_markers,
-            reduction = "tsne",
-            label = TRUE)
-```
-
-# How many cells are in each cluster? 
-```{r include=TRUE}
-# Cluster 1 -> orange thing that's not mapping to anything 
-# ~300 cells, <10% all cells... 
-table(Idents(chen_larva1_seurat_scaled))
-```
-# Are the expression levels in cluster 3 especially shitty?
-```{r include=TRUE}
-test_cluster_averages <- AverageExpression(chen_ciona_seurat)
-test_cluster_averages
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-Test on MTB 2
-"""
-# I feel sketchy about lat2_2, so I'm going to do MTB
-```{r include=TRUE}
-# 2757
-lat2_1a_seurat <- make_ciona_seurat(latTII1a_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-
-# 5593
-lat2_1b_seurat <- make_ciona_seurat(latTII1b_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-
-# 25491
-lat2_2_seurat <- make_ciona_seurat(latTII2_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-```
-
-# DONE (1) Make MTB Seurats 
-```{r include=TRUE}
-# 5399
-midT2_1_seurat <- make_ciona_seurat(midTII1_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-
-# 5063
-midT2_2_seurat <- make_ciona_seurat(midTII2_matrix, ciona_min_cells, ciona_min_features, ciona_n_features)
-```
-
-
-```{r include=TRUE}
-mtb_seurat_list <- list(midT2_1_seurat, midT2_2_seurat)
-```
-
-##### DO NOT TOUCH ######
-# Helper Function for (2)
-```{r include=TRUE}
-# ~30 mins
-make_integrated_seurat <- function(object_list, dims, npcs){
-  # Args:
-    # object_list: list of Seurat objects. e.g. zeb_seurat_list.
-    # dims: input dimensions for FindIntegrationAnchors and IntegrateData. 
-    # npcs: # pcs for PCA and TSNE.
-  
-  # Routine: Do integration. Scale, PCA, TSNE.
-  
-  # Returns:
-    # integrated_seurat: output of above routine.
-  
-  zeb_anchors <- FindIntegrationAnchors(object.list = object_list,
-                                      dims = 1:dims)
-  zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:dims)
-  
-  DefaultAssay(zeb_integrated) <- "integrated"
-  
-  zeb_integrated <- ScaleData(zeb_integrated, verbose = FALSE)
-  zeb_integrated <- RunPCA(zeb_integrated, npcs = npcs, verbose = FALSE)
-  zeb_integrated <- RunTSNE(zeb_integrated, dims = 1:npcs)
-  
-  return(zeb_integrated)
-}
-```
-
-# (2) Batch Correct Values in Integrated Seurat Object
-# 15
-```{r include=TRUE}
-mtb_integrated_15 <- make_integrated_seurat(mtb_seurat_list,
-                                         dims = 15,
-                                         npcs = 15)
-```
-
-# 15- Visualize before Clustering
-```{r include=TRUE}
-DimPlot(mtb_integrated_15, 
-        reduction = "tsne",
-        label = FALSE)
-```
-
-# (3) Perform clustering + Visualize
-# 15
-```{r include=TRUE}
-mtb_integrated_15 <- FindNeighbors(mtb_integrated_15, dims = 1:15)
-mtb_integrated_15 <- FindClusters(mtb_integrated_15, resolution = 1)
-```
-# 15
-```{r include=TRUE}
-DimPlot(mtb_integrated_15, 
-        reduction = "tsne",
-        label = FALSE)
-```
-
-# (4) Map tissues
-# 15- too many clusters, but perfectly clear! <3 
-```{r include=TRUE}
-
-FeaturePlot(object = mtb_integrated_15,
+FeaturePlot(object = clean_chen_larva_integrated_20,
             features = heart_markers,
             reduction = "tsne",
-            label = FALSE)
+            label = TRUE)
 ```
 
-
-"""
-Just try 10 (closer to dimensionality)
-"""
-# 10
-```{r include=TRUE}
-mtb_integrated_10 <- make_integrated_seurat(mtb_seurat_list,
-                                         dims = 10,
-                                         npcs = 10)
-```
-```{r include=TRUE}
-DimPlot(mtb_integrated_10, 
-        reduction = "tsne",
-        label = FALSE)
-```
-# (3) Perform clustering + Visualize
-# 10
-```{r include=TRUE}
-mtb_integrated_10 <- FindNeighbors(mtb_integrated_10, dims = 1:10)
-mtb_integrated_10 <- FindClusters(mtb_integrated_10, resolution = 1)
-```
-
-# 10
-```{r include=TRUE}
-DimPlot(mtb_integrated_10, 
-        reduction = "tsne",
-        label = FALSE)
-```
-
-# (4) Map tissues
-# 10- perfect!
-```{r include=TRUE}
-
-FeaturePlot(object = mtb_integrated_10,
-            features = cns_markers,
-            reduction = "tsne",
-            label = FALSE)
-```
 
