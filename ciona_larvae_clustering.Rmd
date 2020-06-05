@@ -2,17 +2,46 @@
 title: "ciona_larvae_clustering"
 output: html_document
 ---
-# Works in parallel with zeb_degs_heatmaps 
-# Has routines present in both zeb_24hpf_clustering.Rmd and zeb_degs_heatmaps.Rmd, 
-# due to simplicity of Ciona data
 
-# Uses env_ciona_larvae_clustering.RData
+# Follows from: orthology_maps_data_inputs.Rmd.
 
-# Makes integrated Seurat object
-# Clusters
-# Tissue Mapping
-# (1) Get Cells (2) Get DEGs (3) Make top50 vectors (4) Heatmaps
+# (Can) work in parallel with: zeb_degs_heatmaps.Rmd.
 
+# General Description: Maps all tissues using previous markers in clean_chen_larva_integrated_20.
+# Also gets cell names from ClusterIDs.
+
+# Env Used: env_ciona_larvae_clustering.RData.
+
+# Complete Pipeline:
+
+# (1) For each larva dataset, makes larva*_seurat. These are unscaled!
+# (2) Each larva*_seurat is subsetted based on chen_min_features (1000) and chen_max_features (5000). This ensures that every cell has between 1000 and 5000 genes.  
+# These create chen_larva*_seurat.
+
+# (3) chen_larva*_seurats are scaled -> chen_larva*_seurat_scaled. 
+# These then undergo PCA -> ... -> Cluster.
+# (4) Maps tissues. 
+# (5) Records unmapped clusters.
+# !!! (6) chen_larva*_seurat (unscaled) is subsetted -> clean_chen_larva*_seurat (unscaled).
+
+# Note: We found unmapped clusters using SCALED seurats for each dataset,
+# but will subset UNSCALED seurats for use in Integration. 
+
+## Make Integrated Seurat Object
+# (7) chen_larva*_seurats -> Integration -> clean_chen_larva_integrated_20.
+# (8) integrated_seurat is Scaled -> ... -> Cluster.
+# (9) Tissues are mapped. Unmapped tissues are also recorded .
+
+## Need to specifically identify Heart + Muscle
+# (10) Clusters 19, 32, and 29 from clean_chen_larva_integrated_20 are isolated.
+# (11) DEGs + Aniseed expression patterns are validated.
+# (12) They are subclustered into putative_hm_seurat.
+# (13) Heart + Muscle are cleanly identified.
+
+## Makes lists of cells 
+# They are called (ciona_larva_*).
+
+# Segways into: get_pairwise_zeb_ciona_degs.Rmd.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -36,7 +65,8 @@ epi_markers = c("KH2012:KH.C1.611", "KH2012:KH.C8.844")
 mes_markers = c("KH2012:KH.C5.228", "KH2012:KH.C5.202", "KH2012:KH.C1.222")
 endo_markers = c("KH2012:KH.C5.227", "KH2012:KH.S1012.1")
 mus_markers = c("KH2012:KH.S423.6", "KH2012:KH.L116.38", "KH2012:KH.C7.504")
-heart_markers = c("KH2012:KH.C7.205")
+# last 2 are HAND2s
+heart_markers = c("KH2012:KH.C7.205", "KH2012:KH.C1.1116", "KH2012:KH.C14.604")
 ```
 
 
@@ -344,17 +374,173 @@ clean_chen_larva_integrated_20 <- FindClusters(clean_chen_larva_integrated_20, r
 ```
 
 ```{r include=TRUE}
+# SMYD1, ATP2A1, CSMD1; ASB15
 DimPlot(clean_chen_larva_integrated_20, 
         reduction = "tsne",
         label = TRUE)
 ```
 
 ```{r include=TRUE}
-
 FeaturePlot(object = clean_chen_larva_integrated_20,
             features = heart_markers,
             reduction = "tsne",
             label = TRUE)
 ```
+"""
+Let us identify heart + muscle
+"""
 
+"""
+Helper Functions to get Munged Markers
+"""
+```{r include=TRUE}
+munge_markers <- function(markers){
+  # Given the output of FindMarkers, we get genes whose avg_logFC > 0.5.
+  # These genes are ordered in nondecreasing order of avg_logFC.
+  # We also check that p_val_adj < 0.05
+  #
+  # Args:
+  #   markers: Output of FindMarkers (dataframe)
+  #
+  # Returns:
+  #   munged_markers: munged dataframe of KHIDs
+  munged_markers <- markers
+  munged_markers <- munged_markers[order(-munged_markers$avg_logFC), ]
+  munged_markers <- munged_markers[munged_markers$p_val_adj < 0.05, ]
 
+  return(munged_markers)
+}
+```
+
+# Helper Function to get dataframe top50 genes 
+```{r include=TRUE}
+get_top_n_df <- function(cell_type, seurat_object, test_use, n_top) {
+  # Given a cell type (output of WhichCells), get n_top DEGs using FindMarkers
+  # with test of preference and custom munge_markers function 
+  # (ref docstring with details)
+  #
+  # Args and Returns: Self-explanatory
+  cell_type_markers <- FindMarkers(object = seurat_object,
+                                     ident.1 = cell_type,
+                                     test.use = test_use)
+  
+  munged_cell_type_markers <- munge_markers(cell_type_markers)[1:n_top, ]
+  
+  return(munged_cell_type_markers)
+}
+```
+
+"""
+Get marker genes of Cluster 17 (putative heart), compare to in situ data in Aniseed
+"""
+# Top 10 genes- heart+muscles, expressed in tail muscles!  
+```{r include=TRUE}
+cluster_17_cells <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = 17)
+
+cluster_17_top50_markers <- get_top_n_df(cluster_17_cells, clean_chen_larva_integrated_20, "MAST", 50)
+
+write.csv(rownames(cluster_17_top50_markers), "cluster_17_putative_heart_top50_markers.csv")
+```
+
+"""
+Try above for Cluster 32
+"""
+# Epi, neuronal, and tail muscles- I think there might be something here.
+```{r include=TRUE}
+cluster_32_cells <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = 32)
+
+cluster_32_top50_markers <- get_top_n_df(cluster_32_cells, clean_chen_larva_integrated_20, "MAST", 50)
+
+write.csv(rownames(cluster_32_top50_markers), "cluster_32_putative_heart_top50_markers.csv")
+```
+
+"""
+Try above for Cluster 29
+"""
+# There might be something in here too.
+```{r include=TRUE}
+cluster_29_cells <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = 29)
+
+cluster_29_top50_markers <- get_top_n_df(cluster_29_cells, clean_chen_larva_integrated_20, "MAST", 50)
+
+write.csv(rownames(cluster_29_top50_markers), "cluster_29_putative_heart_top50_markers.csv")
+```
+
+"""
+Subcluster 17, 32, 29 ->
+putative_hm_seurat
+"""
+```{r include=TRUE}
+cells_to_keep_hm <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = c(17, 32, 29))
+
+putative_hm_seurat <- subset(clean_chen_larva_integrated_20,
+                             cells = cells_to_keep_hm)
+```
+
+# Pool all cells and re-cluster
+```{r include=TRUE}
+putative_hm_seurat <- putative_hm_seurat
+
+putative_hm_seurat <- ScaleData(putative_hm_seurat)
+
+putative_hm_seurat <- RunPCA(putative_hm_seurat, npcs = 7, verbose = FALSE)
+putative_hm_seurat <- RunTSNE(putative_hm_seurat, npcs = 7, verbose = FALSE)
+```
+```{r include=TRUE}
+# Done for 10 PCs
+ElbowPlot(putative_hm_seurat)
+```
+"""
+Cluster + Map Tissues
+"""
+```{r include=TRUE}
+putative_hm_seurat <- FindNeighbors(putative_hm_seurat, dims = 1:7)
+putative_hm_seurat <- FindClusters(putative_hm_seurat, resolution = 1)
+```
+```{r include=TRUE}
+# HAND2's c("KH2012:KH.C1.1116", "KH2012:KH.C14.604")
+DimPlot(object = putative_hm_seurat,
+        reduction = "tsne",
+        label = TRUE)
+```
+
+```{r include=TRUE}
+# HAND2's c("KH2012:KH.C1.1116", "KH2012:KH.C14.604")
+# trunk ventral cells! 
+FeaturePlot(object = clean_chen_larva_integrated_20,
+            features = cns_markers,
+            reduction = "tsne",
+            label = FALSE)
+```
+
+"""
+Let us now make lists of cells
+"""
+```{r include=TRUE}
+# 3237
+ciona_larva_endo <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = c(12, 2, 20, 3, 0))
+# 1959
+ciona_larva_epi <- WhichCells(clean_chen_larva_integrated_20,
+                              idents = c(28, 5, 25, 4, 18, 19))
+# 4203
+ciona_larva_mes <- WhichCells(clean_chen_larva_integrated_20,
+                              idents = c(7, 30, 13, 21, 23, 1, 11, 22, 8, 10, 35, 14, 6))
+# 159
+ciona_larva_mus <- WhichCells(putative_hm_seurat,
+                              idents = c(7, 4, 3, 6, 8))
+# 207
+ciona_larva_heart <- WhichCells(putative_hm_seurat,
+                                idents = c(2, 1, 0))
+# 1033
+ciona_larva_cns <- WhichCells(clean_chen_larva_integrated_20,
+                              idents = c(26, 9, 15, 24))
+# 550
+ciona_larva_noto <- WhichCells(clean_chen_larva_integrated_20,
+                               idents = 27)
+
+```

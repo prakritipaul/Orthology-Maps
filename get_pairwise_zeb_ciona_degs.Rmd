@@ -1,0 +1,340 @@
+---
+title: "get_pairwise_zeb_ciona_degs"
+output: html_document
+
+---
+# Follows from: ciona_larvae_clustering.Rmd and zeb_degs_heatmaps.Rmd.
+# Note: Uses the ClusterIDs and cell names from above scripts. 
+
+# Works in parallel with: None.
+
+# General Description: Script implements various methods to get gene set
+# to be used for downstream cross-species cell type comparisons. 
+
+# Uses env_get_pairwise_zeb_ciona_degs.RData
+
+## Module v1: Tosches 
+# (1) Generates unique_ciona_deg_vec (444) and unique_zeb_deg_vec (1372) from supersets of top50 pairwise DEGs (Tosches Method).
+# (2) These vectors are manipulated in "get_one_to_one_gene_lists.py" to make
+#     unique_ciona_KHID_vec and zeb_ortho_gene_vec
+# (3) Expression patterns are visualized in Ciona tissues
+#     and Zeb notochord.
+# (4) First exploratory analyses of 10/top50 Ciona notochord DEGs are performed. 
+
+# TO DO Segways into 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+```
+
+"""
+v1 Module Start
+"""
+
+"""
+Let's get all pairwise-cluster DEGs in Ciona (444)
+"""
+
+```{r include=TRUE}
+ciona_cell_type_list <- list(endo = ciona_larva_endo,
+                             epi = ciona_larva_epi,
+                             mes = ciona_larva_mes,
+                             mus = ciona_larva_mus,
+                             heart = ciona_larva_heart,
+                             cns = ciona_larva_cns,
+                             noto = ciona_larva_noto)
+```
+
+```{r include=TRUE}
+test_ciona_cell_type_list <- list(mes = ciona_larva_mes,
+                                  mus = ciona_larva_mus,
+                                  noto = ciona_larva_noto)
+```
+
+# Do routine.
+# Test Case passed.
+# Thus, set test_ciona_cell_type_list to ciona_cell_type_list.
+```{r include=TRUE}
+# ~10 mins
+# 444
+test_ciona_deg_vec <- c()
+
+test_ciona_cell_type_list <- ciona_cell_type_list
+
+for (i in 1:length(test_ciona_cell_type_list)) {
+  for (j in 1:length(test_ciona_cell_type_list)) {
+    if (i != j) {
+      cat("i = ", i, "j = ", j, "\n\n")
+      cell_type_marker_df <- FindMarkers(object = clean_chen_larva_integrated_20,
+                                     ident.1 = test_ciona_cell_type_list[[i]],
+                                     ident.2 = test_ciona_cell_type_list[[j]],
+                                     test.use = "MAST")
+      
+      munged_cell_type_marker_df <- munge_markers(cell_type_marker_df)[1:50, ]
+      munged_cell_type_markers <- rownames(munged_cell_type_marker_df)
+      
+      test_ciona_deg_vec <- c(test_ciona_deg_vec, munged_cell_type_markers)
+    }
+  }
+}
+
+unique_test_ciona_deg_vec <- unique(test_ciona_deg_vec)
+
+# Rename above
+# 444
+unique_ciona_deg_vec <- unique_test_ciona_deg_vec
+```
+"""
+Let's get all pairwise-cluster DEGs in Zebrafish
+"""
+
+```{r include=TRUE}
+# 43 cell types 
+zeb_cell_type_list <- do.call(c, list(cell_type_list_1,
+                                      cell_type_list_2,
+                                      cell_type_list_3,
+                                      cell_type_list_4))
+```
+
+
+```{r include=TRUE}
+# 3 h
+# 1372 
+zeb_deg_vec <- c()
+
+for (i in 1:length(zeb_cell_type_list)) {
+  for (j in 1:length(zeb_cell_type_list)) {
+    if (i != j) {
+      cat("i = ", i, "j = ", j, "\n\n")
+      cell_type_marker_df <- FindMarkers(object = zeb_integrated_50,
+                                     ident.1 = zeb_cell_type_list[[i]],
+                                     ident.2 = zeb_cell_type_list[[j]],
+                                     test.use = "MAST")
+      
+      munged_cell_type_marker_df <- munge_markers(cell_type_marker_df)[1:50, ]
+      munged_cell_type_markers <- rownames(munged_cell_type_marker_df)
+      
+      zeb_deg_vec <- c(zeb_deg_vec, munged_cell_type_markers)
+    }
+  }
+}
+
+unique_zeb_deg_vec <- unique(zeb_deg_vec)
+```
+
+"""
+Export these DEGs
+"""
+
+```{r include=TRUE}
+write.csv(x = unique_zeb_deg_vec,
+          file = "unique_zeb_deg_vec.csv",
+          row.names = FALSE)
+
+write.csv(x = unique_ciona_deg_vec,
+          file = "unique_ciona_deg_vec.csv",
+          row.names = FALSE)
+```
+
+"""
+What do the profiles of the 30 1-1 DEGs look like?
+"""
+
+```{r include=TRUE}
+ciona_ortho_KHID_vec <- c('KH2012:KH.C3.724', 'KH2012:KH.L107.7', 'KH2012:KH.C5.302', 'KH2012:KH.C1.1067', 'KH2012:KH.C7.633', 'KH2012:KH.C11.2')
+```
+
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_endo,
+          slot = "data",
+          size = 2)
+```
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_epi,
+          slot = "data",
+          size = 2)
+```
+
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_mes,
+          slot = "data",
+          size = 2)
+```
+
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_mus,
+          slot = "data",
+          size = 2)
+```
+
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_heart,
+          slot = "data",
+          size = 2)
+```
+
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_cns,
+          slot = "data",
+          size = 2)
+```
+
+
+"""
+Notochords?
+"""
+
+# Ciona
+```{r include=TRUE}
+DoHeatmap(object = clean_chen_larva_integrated_20,
+          features = ciona_ortho_KHID_vec,
+          cells = ciona_larva_noto,
+          slot = "data",
+          size = 2)
+```
+
+```{r include=TRUE}
+zeb_ortho_gene_vec <- c('tgfb3', 'lhx5', 'blvrb', 'hpca', 'col1a2', 'crip1')
+```
+
+# Zeb
+```{r include=TRUE}
+DoHeatmap(object = zeb_integrated_50,
+          features = zeb_ortho_gene_vec,
+          cells = noto,
+          slot = "data",
+          size = 2)
+```
+
+"""
+Comparative Mona Analysis of Noto Top50 DEGs
+"""
+
+"""
+Ciona
+"""
+# (Ciona) Get top50 DEGs 
+```{r include=TRUE}
+ciona_noto_top50_markers <- get_top_n_df(ciona_larva_noto, clean_chen_larva_integrated_20, "MAST", 50)
+
+write.csv(rownames(ciona_noto_top50_markers), "ciona_noto_top50_markers.csv", row.names = FALSE)
+```
+
+# (Ciona) List of 1-1 orthologs
+```{r include=TRUE}
+ciona_ortho_KHID_vec <- c("KH2012:KH.C3.724", "KH2012:KH.L107.7", "KH2012:KH.C5.302", "KH2012:KH.C1.1067", "KH2012:KH.C7.633", "KH2012:KH.C11.2")
+```
+
+# Exploratory Questions
+# (Ciona) Are any of these in top50 DEGs for Ciona Noto?
+```{r include=TRUE}
+# Yes!!
+
+if (any(ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers))) {
+  print(ciona_ortho_KHID_vec[ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers)])
+} 
+
+# KH2012:KH.C3.724, COL1A1/2
+
+# KH2012:KH.C7.633, COL1A1/2
+```
+
+# (Ciona) What are the first 10 markers?
+```{r include=TRUE}
+# From code, from Christelle Best Human Hits
+
+ciona_noto_top10_markers <- rownames(ciona_noto_top50_markers)[1:10]
+# KH2012:KH.S423.2, FIBCD1, TNR, TNXB
+ciona_noto_top10_markers[1]
+# noto8! KH2012:KH.C11.737, CALM1, CALM3, CALML3
+ciona_noto_top10_markers[2]
+# KH2012:KH.C13.35, CNMD, TNMD
+ciona_noto_top10_markers[3]
+# KH2012:KH.C8.749, None 
+ciona_noto_top10_markers[4]
+# KH2012:KH.C10.8, FAT4, PROS1, SVEP1
+ciona_noto_top10_markers[5]
+# KH2012:KH.C9.174, None 
+ciona_noto_top10_markers[6]
+# KH2012:KH.C9.698, GPX4/7/8
+ciona_noto_top10_markers[7]
+# KH2012:KH.L18.30, PID1
+ciona_noto_top10_markers[8]
+# KH2012:KH.C8.470, TFPI, TFPI2, WFIKKN2 
+ciona_noto_top10_markers[9]
+# KH2012:KH.C11.328, SERPINB10, SERPINB9, SERPINC1
+ciona_noto_top10_markers[10]
+
+```
+
+# What are the orthologs of these genes?
+```{r include=TRUE}
+# zeb/human ortholog (from Ensembl)
+
+# (1) ERROR KH2012:KH.S423.2 -> ENSCING00000017001 -> None/None 
+# *There should be a human ortholog in Ensembl
+# *Correct that ENSC is in unmapped_list
+
+# (2) ERROR KH.C11.737 -> ENSCING00000019441 -> None/None
+# *There should be a human ortholog in Ensembl
+# *Correct that ENSC is in unmapped_list
+
+# (3) CORRECT KH.C13.35 -> ENSCING00000016942
+# -> tnmd  (ENSDARG00000052615)
+# -> cnmd  (ENSDARG00000100133)/
+# --> TNMD  (ENSG00000000005)
+# --> CNMD  (ENSG00000136110)
+# *Correct that ENSC is in many_list
+
+# (4) Skipped
+
+# (5) KH.C10.8 -> ENSCING00000005858 (FAT4, PROS1, SVEP1)
+# -> ndufs2  (ENSDARG00000007526)
+# --> NDUFS2  (ENSG00000158864)
+# *This is a 1-1 ortholog
+# *Correct that ENSC is in correct_list
+# *KH.C10.8 in unique_ciona_deg_vec, but ndufs2 is not in unique_zeb_deg_vec
+
+# (7) KH.C9.698 -> ENSCING00000012924 (GPX4/7/8)
+# many-to-many Zeb  
+# (ENSDARG00000003077) -> ENSCING00000001683, ENSCING00000012924
+
+
+```
+
+"""
+TO DO
+"""
+
+# (Zeb) Are any of these in top50 DEGs for Zeb Noto?
+```{r include=TRUE}
+# No :(
+zeb_true_vec <- zeb_ortho_gene_vec %in% ciona_noto_top50_markers
+```
+
+# (Ciona) What are the first 10 markers?
+```{r include=TRUE}
+
+
+```

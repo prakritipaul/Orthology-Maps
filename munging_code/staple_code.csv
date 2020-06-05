@@ -1,0 +1,38 @@
+Staple Code- Python
+
+(1) How to open a pickle:
+
+GFF_DIR
+GFF_PICKLE = open(GFF_DIR, "rb")
+CIONA_GFF_DICT = pickle.load(GFF_PICKLE)
+
+(2) How to pickle:
+
+PICKLE_OUT = open("TARGET_CDS_INTERVAL_DICT.pickle", "wb")
+pickle.dump(TARGET_CDS_INTERVAL_DICT, PICKLE_OUT)
+PICKLE_OUT.close()
+
+(3) Csv reader:
+
+ciona_ens_dir
+with open(ciona_ens_dir) as csv_file:
+	csv_reader = csv.reader(csv_file, delimiter="\t")
+
+###
+
+Staple Code- R
+
+(1) Read in .csv file:
+
+zeb_4hpf_df <- read.table(zeb_4hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE,
+                          row.names = 1)
+
+(2) Write out .csv file:
+
+write.csv(x = unique_zeb_deg_vec,
+          file = "unique_zeb_deg_vec.csv",
+          row.names = FALSE)
+

@@ -3,20 +3,32 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-# This notebook follows from orthology_maps_data_inputs.Rmd, where I first began clustering klein's 24hpf data.
-# Works in parallel with ciona_larvae_clustering.Rmd
+# Follows from: orthology_maps_data_inputs.Rmd.
 
-# Uses env_zeb_24hpf_clustering.RData
+# (Can) work in parallel with: ciona_larvae_clustering.Rmd.
 
-# All tissues have been mapped
-# DGEs for all tissues present
-# Also other batch correction plots, summary stats
+# General Description: Maps all cell types using Wagner's DEGs in zeb_integrated_50.
+
+# Note: This script is used for visualization for Tissue Mapping only! 
+# ClusterIDs are present in zeb_degs_heatmaps.Rmd.
+
+# Env used: env_zeb_24hpf_clustering.RData.
+
+# Complete Pipeline:
+
+# (1) Makes zeb_*t2_24hpf_seurat (6 of them, _t5). These are unscaled.
+# (2) Uses above to make various integrated objects (vary in # anchors).
+# (3) Ultimately, zeb_integrated_50 is used for tissue mapping.
+
+# Other Contents:
+# DEGs from Wagner Supplement Table 2 for all tissues.
+# Batch correction plots, summary stats.
 
 # Notes:
-## Unused markers (Zfin, Andrea) at bottom
-## zeb_integrated_* (10, 30 , 70) have been removed from .Renv
+# Unused markers (Zfin, Andrea) at bottom.
+# zeb_integrated_* (10, 30 , 70) have been removed from .Renv.
 
-# Segways into zeb_degs_heatmaps.Rmd
+# Segways into: zeb_degs_heatmaps.Rmd.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

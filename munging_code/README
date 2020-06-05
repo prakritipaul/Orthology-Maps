@@ -1,0 +1,20 @@
+README
+munging_code directory 
+
+(1) ensembl_get_one_to_one_orthologs.py
+Created the following pickles:
+(a) one_to_one_ortho_dict
+(b) ciona_ENS_to_KHID_dict*
+(c) correct_ortho_list
+(d) unmapped_ortho_list
+(e) many_ortho_list
+
+(2) make_ciona_KHID_to_ENS_and_gene_dicts.py
+Created the following pickles:
+(a) ciona_KHID_to_ENS_dict
+(b) ciona_KHID_to_gene_dict
+
+Note: 
+Pickles are located in "princeton_google_drive/Levine Lab/Orthology-Maps/gene_set_analyses/pickles" directory
+
+

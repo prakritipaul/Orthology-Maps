@@ -3,15 +3,19 @@ title: "orthology_maps_data_inputs"
 output: html_document
 ---
 
-# Purpose of Notebook
-# Import all data needed for Orthology Maps Projects
+# Follows from: None. 
+# Note: This is the first script of entire Orthology-Maps project. 
 
-# Material for initial 24hpf clustering from Klein data is kept.
-# Copy of it Transferred to zeb_24hpf_clustering.Rmd
+# Works in parallel with: None.
 
-## (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
+# General Description: Imports all data and makes dataframes needed for Orthology-Maps project.
 
-## (Zebrafish) Schier: 
+# Env used: env_orthology_maps_data_inputs.RData.
+
+# Contents: 
+# (Zebrafish) Klein : 4, 6, 8, 10, 14, 18, 24 hpf
+
+# (Zebrafish) Schier: 
 1) 30% epiboly (2)
 2) 3-somite (1, 3)
 3) 50% epiboly (4, 7)
@@ -25,8 +29,11 @@ output: html_document
 11) oblong (2, 27)
 12 (shield, 1, 28)
 
-## Ciona
+# Ciona
 # iniG, midG, earN, latN, iniT1, earT1, midT2, latT1, latT2, larva
+
+# Segways into: zeb_24hpf_clustering.Rmd and ciona_larvae_clustering.Rmd
+# Note: These scripts use the environment initially created from this script.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

@@ -3,23 +3,47 @@ title: "zeb_degs_heatmaps"
 output: html_document
 ---
 
-# Follows from zeb_24hpf_clustering.
-# Works in parallel with ciona_larvae_clustering.Rmd
+# Follows from: zeb_24hpf_clustering.Rmd.
 
-# Uses zeb_integrated_50 Seurat 
-# Uses env_zeb_24hpf_clustering.RData
+# (Can) work in parallel with: ciona_larvae_clustering.Rmd.
+
+# General Description: Validates Zeb Cell Type Mapping by examining Heatmaps and Distribution of Common DEG Counts.
+# Based on expression of top50 DEGs for each cell type. Gets cell names from ClusterIDs here.
+
+# Env used: env_zeb_24hpf_clustering.RData.
+# Note: Uses zeb_integrated_50 Seurat.
+
+# Complete Pipeline:
 
 # For all clusters (from zeb_24hpf_clustering.Rmd):
-# (1) Get cells, (2) Get DEGs, (3) Make top50 vector, (4) Visualize Heatmap 
+# (1) Gets cells
+# e.g. epi_1 (output of WhichCells)
 
-# Segways into
+# (2) Gets DEGs
+# e.g. cell_type_list_* = list(epi_1, noto...) where each element is a list of cell names belonging to that cell type
+# cell_type_flags_* = c("epi_1", "noto"...)
+# marker_df_list_* = list(epi_1 = top50_df...)
+# range of * [1,4]
 
+# (3) Makes top50 vector -> (4) Visualizes Heatmaps.
+
+# (5) Validates Clusters: 
+# Gets count of shared markers/Common DEG Counts- top 20/50 (Me) and reported 20 (Wagner)
+
+# Note: Makes separate vectors for my "collapsed" clusters- these are made
+# from 2+ separate clusters in Wagner.
+
+# Histogram of Common DEG Counts is included at the end of the Script
+
+# Note: These DEGs are used for visualization, not for downstream analyses, which require pairwise DEG calculations!
+
+# Segways into: get_pairwise_zeb_ciona_degs.Rmd.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r include=TRUE}
+```{r include=FALSE}
 library(Seurat)
 library(dplyr)
 library(ggplot2)
@@ -31,7 +55,8 @@ library(MAST)
 
 """
 Pipeline:
-Get cells -> DEGs -> top50 vector -> Heatmap
+Get cells -> DEGs -> top50 vector -> Heatmap -> Cluster Validations
+
 """
 
 """
@@ -160,6 +185,142 @@ DoHeatmap(object = zeb_integrated_50,
           slot = "data",
           size = 2)
 ```
+### Validations (1)
+```{r include=TRUE}
+common_deg_length_list_1 <- list()
+special_cell_type_vec <- c()
+```
+
+# Cell Type 1 Flags 
+# Skipped epi_1 and epi_2
+```{r include=TRUE}
+# 6
+me_noto <- rownames(marker_df_list_1$noto)[1:20]
+wagner_noto <- c("ntd5", "aplp2", "emilin3a", "pmp22b", "loxl5b", "ta", "si:dkey-12l12.1", "plod1a", "calua", "fstl1b", "fn1a", "LOC100333762", "col2a1a", "serpinh1b", "fxyd1", "LOC100149028", "fstl1a", "col11a1a", "cmn", "col2a1b", 	"emilin3a", "si:dkey-12l12.1", "loxl5b", "ta", "LOC100333762", "LOC100149028", "ntd5", "fxyd1", "cmn", "pmp22b", "fn1a", "plod1a", "serpinh1b", "calua", "aplp2", "col11a1a", "fstl1a", "col2a1a", "fstl1b", "col2a1b")
+
+common_noto <- intersect(me_noto, wagner_noto)
+
+common_deg_length_list_1[["noto"]] <- length(common_noto)
+```
+
+
+```{r include=TRUE}
+# 17
+me_heart_52 <- rownames(marker_df_list_1$heart_52)[1:20]
+wagner_heart_52 <- c("tpm4a", "fhl2a", "tnnt2a", "myl7", "tnnc1a", "tnni1b", "cmlc1", "ttna", "hm:zewp0073", "actc1a", "slc8a1a", "vmhc", "rbpms2b", "acta1b",	"hapln1a",	"rbfox1l",	"vmhcl", "zgc:86709", "atp2a2a", "nppa", "myl7", "cmlc1", "vmhc", "tnni1b", "tnnt2a", "rbfox1l", "acta1b", "vmhcl", "zgc:86709", "rbpms2b", "slc8a1a", "tnnc1a", "ttna", "actc1a", "hm:zewp0073", "fhl2a", "nppa", "tpm4a", "atp2a2a", "hapln1a")
+
+common_heart_52 <- intersect(me_heart_52, wagner_heart_52)
+
+common_deg_length_list_1[["heart_52"]] <- length(common_heart_52)
+```
+
+
+```{r include=TRUE}
+# 17
+me_heart_51_56 <- rownames(marker_df_list_1$heart_51_56)[1:20]
+wagner_heart_51 <- c("si:dkey-261h17.1", "LOC100331639", "tpm4a", "krt18", "krt8", "pcolcea", "tmem88b", "flna", "ftr82", "fn1a", "si:dkey-207j16.2", "rbpms2b", "krt94", "podxl", "myl9b", "LOC563082", "hand2", "colec10", "sfrp5", "fabp11a", "si:dkey-261h17.1", "pcolcea", "tmem88b", "krt18", "ftr82", "LOC100331639", "fn1a", "si:dkey-207j16.2", "krt8", "flna", "tpm4a", "rbpms2b", "krt94", "LOC563082", "myl9b", "hand2", "podxl", "colec10", "sfrp5", "fabp11a")
+
+wagner_heart_56 <- c("si:dkey-261h17.1", "pmp22a", "prrx1a", "reck", "prdm1a", "aldh1a2", "prdm16", "hoxd9a", "twist3",	"fn1a", "tmem88b", "npm1a", "hoxd10a", "hoxa1a", "her6", "meis3", "rdh10a", "bmp4", "tmem88a", "pdgfab", "si:dkey-261h17.1", "prrx1a", "aldh1a2", "prdm1a", "pmp22a", "reck", "prdm16", "hoxd9a", "twist3", "tmem88b", "hoxd10a", "fn1a", "npm1a", "hoxa1a", "her6", "tmem88a", "bmp4", "meis3", "rdh10a", "pdgfab") 
+
+# 17/37 unique
+wagner_heart_51_56 <- unique(c(wagner_heart_51, wagner_heart_56))
+
+common_heart_51_56 <- intersect(me_heart_51_56, wagner_heart_51_56)
+
+common_deg_length_list_1[["heart_51_56"]] <- length(common_heart_51_56)
+
+special_cell_type_vec <- c(special_cell_type_vec, "heart_51_56")
+```
+
+
+```{r include=TRUE}
+# 19
+me_muscles <- rownames(marker_df_list_1$muscles)[1:20]
+wagner_muscle_12 <- c("mylz3", "actc1a", "hm:zewp0073", "myl1", "mylpfa", "tpma", "tnnc2", "acta1b", "ckmb", "ckma", "actc1b", "aldoab", "tnni2a.4", "pvalb2", "tnnt3a", "tnni2b.1", "ns:zf-e68", "mylpfb", "tnnt3b", "pvalb1", "pvalb2", "ns:zf-e68", "tnni2b.1", "ckmb", "tnni2a.4", "ckma", "mylpfa", "tnnt3a", "myl1", "tpma", "aldoab", "mylpfb", "tnnc2", "acta1b", "mylz3", "actc1b", "tnnt3b", "pvalb1", "hm:zewp0073", "actc1a")
+
+wagner_muscle_53 <- c("tpm4a", "fhl2a", "tnnt2a", "myl7", "tnnc1a", "tnni1b", "cmlc1", "ttna", "hm:zewp0073", "actc1a", "slc8a1a", "vmhc", "rbpms2b", "acta1b", "hapln1a", "rbfox1l", "vmhcl", "zgc:86709", "atp2a2a", "nppa", "myl7", "cmlc1", "vmhc", "tnni1b", "tnnt2a", "rbfox1l", "acta1b", "vmhcl", "zgc:86709", "rbpms2b", "slc8a1a", "tnnc1a", "ttna", "actc1a", "hm:zewp0073", "fhl2a", "nppa", "tpm4a", "atp2a2a", "hapln1a")
+
+# 19/37
+wagner_muscles <- unique(c(wagner_muscle_12, wagner_muscle_53))
+
+common_muscles <- intersect(me_muscles, wagner_muscles)
+
+common_deg_length_list_1[["muscles"]] <- length(common_muscles)
+
+special_cell_type_vec <- c(special_cell_type_vec, "muscles")
+```
+
+
+```{r include=TRUE}
+# 14
+me_panc_prim_endo <- rownames(marker_df_list_1$panc_prim_endo)[1:20]
+wagner_panc_prim_endo <- c("slc1a4", "pax6b", "anxa4", "slc43a2a", "scg3", "isl1", "tspan7b", "rltgr", "scgn", "nucb2b", "neurod1", "LOC565781", "si:dkey-153k10.9", "sst2", "sik1", "si:ch211-235e18.3", "ins", "ndufa4l2a", "gcgb", "gcga", "rltgr", "nucb2b", "LOC565781", "isl1", "scg3",	"sst2", "ins", "gcgb", "neurod1", "slc43a2a", "gcga", "si:dkey-153k10.9", "tspan7b", "ndufa4l2a", "slc1a4", "scgn", "sik1", "pax6b", "anxa4", "si:ch211-235e18.3")
+
+common_panc_prim_endo <- intersect(me_panc_prim_endo, wagner_panc_prim_endo)
+
+common_deg_length_list_1[["panc_prim_endo"]] <- length(common_panc_prim_endo)
+```
+
+
+```{r include=TRUE}
+# 18
+me_ph_arch_cd248b <- rownames(marker_df_list_1$ph_arch_cd248b)[1:20]
+wagner_ph_arch_cd248b <- c('pmp22a', 'cd248b', 'col1a1a', 'col1a2', 'tgfbi', 'fibina', 'reck', 'tpm4a', 'cthrc1a', 'col11a1b', 'col2a1b', 'col5a1', 'foxc1a', 'fmoda', 'cdh11', 'colec12', 'si:dkey-261h17.1', 'matn4', 'col9a2', 'col2a1a', '', 'pmp22a', 'cd248b', 'col1a1a', 'tgfbi', 'col1a2', 'reck', 'tpm4a', 'fibina', 'cthrc1a', 'col11a1b', 'col2a1b', 'col5a1', 'foxc1a', 'cdh11', 'fmoda', 'colec12', 'si:dkey-261h17.1', 'matn4', 'col9a2', 'col2a1a')
+
+common_ph_arch_cd248b <- intersect(me_ph_arch_cd248b, wagner_ph_arch_cd248b)
+
+common_deg_length_list_1[["ph_arch_cd248b"]] <- length(common_ph_arch_cd248b)
+```
+
+
+```{r include=TRUE}
+# 12
+me_ph_arch_ndnf <- rownames(marker_df_list_1$ph_arch_ndnf)[1:20]
+wagner_ph_arch_ndnf <- c('pitx3', 'si:dkey-261h17.1', 'ndnf', 'eya2', 'pmp22a', 'foxc1a', 'fgfr4', 'foxc1b', 'tmem88b', 'nrp2a', 'prrx1a', 'shisa3', 'nrp2b', 'met', 'fibina', 'pitx2', 'si:ch211-201m7.3', 'flrt3', 'akap12b', 'ppap2a', '', 'pitx3', 'si:dkey-261h17.1', 'foxc1a', 'eya2', 'foxc1b', 'ndnf', 'pmp22a', 'tmem88b', 'prrx1a', 'nrp2a', 'nrp2b', 'fgfr4', 'fibina', 'shisa3', 'met', 'pitx2', 'si:ch211-201m7.3', 'flrt3', 'ppap2a', 'akap12b')
+common_ph_arch_ndnf <- intersect(me_ph_arch_ndnf, wagner_ph_arch_ndnf)
+
+common_deg_length_list_1[["ph_arch_ndnf"]] <- length(common_ph_arch_ndnf)
+```
+
+
+```{r include=TRUE}
+# 17
+me_endothelials <- rownames(marker_df_list_1$endothelials)[1:20]
+wagner_endothelial_32 <- c('clec14a', 'yrk', 'krt18', 'fli1a', 'etv2', 'tmem88a', 'kdrl', 'si:ch211-156j16.1', 'si:dkey-261h17.1', 'egfl7', 'stab2', 'krt8', 'sox7', 'cldn5b', 'aplnrb', 'dab2', 'mrc1a', 'vsg1', 'sox18', 'aqp1a.1', '', 'clec14a', 'yrk', 'fli1a', 'tmem88a', 'si:ch211-156j16.1', 'etv2', 'kdrl', 'krt18', 'egfl7', 'si:dkey-261h17.1', 'stab2', 'sox7', 'cldn5b', 'krt8', 'dab2', 'aplnrb', 'mrc1a', 'vsg1', 'sox18', 'aqp1a.1')
+
+wagner_endothelial_38 <- c('ctsla', 'stab2', 'dab2', 'mrc1a', 'glula', 'snx5', 'si:ch211-156j16.1', 'clec14a', 'flt4', 'mcamb', 'f13a1b', 'lamp2', 'rab11bb', 'sox18', 'etv2', 'lgmn', 'gpr182', 'tagln2', 'vsg1', 'postnb', '', 'dab2', 'mrc1a', 'stab2', 'clec14a', 'flt4', 'mcamb', 'si:ch211-156j16.1', 'etv2', 'sox18', 'gpr182', 'rab11bb', 'vsg1', 'glula', 'f13a1b', 'tagln2', 'snx5', 'lamp2', 'lgmn', 'postnb', 'ctsla')
+
+# 17/33 
+wagner_endothelials <- unique(c(wagner_endothelial_32, wagner_endothelial_38))
+
+common_endothelials <- intersect(me_endothelials, wagner_endothelials)
+
+common_deg_length_list_1[["endothelials"]] <- length(common_endothelials)
+
+special_cell_type_vec <- c(special_cell_type_vec, "endothelials")
+```
+
+
+```{r include=TRUE}
+# 14
+me_tail_spinal_cord <- rownames(marker_df_list_1$tail_spinal_cord)[1:20]
+wagner_tail_spinal_cord <- c('hoxb9a', 'mdka', 'ldlrad2', 'slc1a3a', 'hoxc3a', 'gfap', 'pkd1b', 'LOC100334443', 'LOC100001360', 'vim', 'hapln1a', 'LOC103910062', 'her12', 'hoxa4a', 'zgc:162939', 'pax6b', 'fosab', 'junbb', 'si:ch211-251b21.1', 'apoc1l', '', 'mdka', 'hoxb9a', 'slc1a3a', 'ldlrad2', 'gfap', 'hoxc3a', 'LOC100334443', 'pkd1b', 'vim', 'hapln1a', 'LOC100001360', 'her12', 'LOC103910062', 'hoxa4a', 'pax6b', 'zgc:162939', 'fosab', 'junbb', 'si:ch211-251b21.1', 'apoc1l')
+
+common_tail_spinal_cord <- intersect(me_tail_spinal_cord, wagner_tail_spinal_cord)
+
+common_deg_length_list_1[["tail_spinal_cord"]] <- length(common_tail_spinal_cord)
+```
+
+```{r include=TRUE}
+# 2
+me_tail_PSM <- rownames(marker_df_list_1$tail_PSM)[1:20]
+wagner_tail_PSM <- c('apoc1l', 'wu:fb77a09', 'LOC100537277', 'apoeb', 'her1', 'ntd5', 'fn1b', 'tuba8l2', 'hoxc13b', 'cxcl12b', 'msgn1', 'meox1', 'her7', 'c1qtnf5', 'palld', 'efemp2b', 'crabp2b', 'fn1a', 'col1a1a', 'and1', '', 'LOC100537277', 'apoc1l', 'her1', 'ntd5', 'apoeb', 'hoxc13b', 'fn1b', 'her7', 'c1qtnf5', 'cxcl12b', 'msgn1', 'tuba8l2', 'efemp2b', 'palld', 'wu:fb77a09', 'meox1', 'crabp2b', 'fn1a', 'col1a1a', 'and1')
+
+common_tail_PSM <- intersect(me_tail_PSM, wagner_tail_PSM)
+
+common_deg_length_list_1[["tail_PSM"]] <- length(common_tail_PSM)
+```
+
 
 """
 Chunk 2: Diff Neurons + NCs
@@ -221,8 +382,134 @@ DoHeatmap(object = zeb_integrated_50,
 ```
 
 
+# Validations (2)
+```{r include=TRUE}
+common_deg_length_list_2 <- list()
+special_cell_type_vec_2 <- c()
+```
+
+# Cell Type 2 Flags 
+```{r include=TRUE}
+# 15/31
+me_diff_neu_hmx1_dlx <- rownames(marker_df_list_2$diff_neu_hmx1_dlx)[1:20]
+
+wagner_diff_neu_hmx1 <- c('celf3a', 'sox1a', 'LOC100536821', 'rtn1a', 'sox1b', 'LOC103911504', 'hmx3', 'hmx3a', 'stmn1b', 'myt1a', 'mllt11', 'mpped2', 'dpysl3', 'elavl3', 'sox5', 'atp1a3a', 'tmsb', 'scg2b', 'celf4', 'six6b', '', 'sox1a', 'hmx3a', 'hmx3', 'sox1b', 'LOC103911504', 'mllt11', 'LOC100536821', 'celf3a', 'mpped2', 'scg2b', 'stmn1b', 'dpysl3', 'atp1a3a', 'rtn1a', 'celf4', 'myt1a', 'tmsb', 'sox5', 'elavl3', 'six6b')
+
+wagner_diff_neu_dlx <- c('dlx1a', 'dlx5a', 'dlx2a', 'celf3a', 'elavl3', 'sp9', 'LOC100536821', 'rtn1a', 'dlx2b', 'dpysl3', 'stmn1b', 'mllt11', 'myt1a', 'celf4', 'zfhx4', 'vamp2', 'sox4a', 'atp1a3a', 'LOC100537384', 'pbx3b', '', 'dlx1a', 'dlx5a', 'dlx2a', 'celf3a', 'sp9', 'LOC100536821', 'elavl3', 'rtn1a', 'dlx2b', 'dpysl3', 'stmn1b', 'myt1a', 'mllt11', 'vamp2', 'celf4', 'LOC100537384', 'sox4a', 'atp1a3a', 'zfhx4', 'pbx3b')
+
+# 15/31
+wagner_diff_neu_hmx1_dlx <- unique(c(wagner_diff_neu_hmx1, wagner_diff_neu_dlx))
+
+common_diff_neu_hmx1_dlx <- intersect(me_diff_neu_hmx1_dlx, wagner_diff_neu_hmx1_dlx)
+
+common_deg_length_list_2[["diff_neu_hmx1_dlx"]] <- length(common_diff_neu_hmx1_dlx)
+
+special_cell_type_vec_2 <- c(special_cell_type_vec_2, "diff_neu_hmx1_dlx")
+```
+
+
+```{r include=TRUE}
+# 16
+me_diff_neu_phox2a <- rownames(marker_df_list_2$diff_neu_phox2a)[1:20]
+wagner_diff_neu_phox2a <- c('phox2a', 'phox2bb', 'elavl3', 'vim', 'nkx6.1', 'onecut1', 'insm1a', 'dlb', 'nhlh2', 'cxcr4b', 'isl1', 'slit3', 'neurod4', 'onecutl', 'ebf2', 'epb41a', 'gng2', 'tubb5', 'tmsb', 'plxna4', '', 'phox2a', 'phox2bb', 'insm1a', 'nkx6.1', 'vim', 'onecut1', 'isl1', 'nhlh2', 'dlb', 'cxcr4b', 'elavl3', 'slit3', 'neurod4', 'onecutl', 'ebf2', 'epb41a', 'gng2', 'tubb5', 'plxna4', 'tmsb')
+
+common_diff_neu_phox2a <- intersect(me_diff_neu_phox2a, wagner_diff_neu_phox2a)
+
+common_deg_length_list_2[["diff_neu_phox2a"]] <- length(common_diff_neu_phox2a)
+```
+
+
+```{r include=TRUE}
+# 17
+me_diff_neus <- rownames(marker_df_list_2$diff_neus)[1:20]
+wagner_diff_neus <- c('elavl3', 'onecut1', 'tubb5', 'LOC100536821', 'myt1a', 'ebf2', 'rtn1a', 'nhlh2', 'dlb', 'tmsb', 'mllt11', 'stxbp1a', 'snap25a', 'cplx2l', 'elavl4', 'scrt2', 'gap43', 'LOC797032', 'gadd45gb.1', 'otpa', '', 'elavl3', 'onecut1', 'tubb5', 'LOC100536821', 'myt1a', 'ebf2', 'dlb', 'rtn1a', 'nhlh2', 'tmsb', 'mllt11', 'stxbp1a', 'scrt2', 'gap43', 'elavl4', 'snap25a', 'cplx2l', 'LOC797032', 'gadd45gb.1', 'otpa')
+
+common_diff_neus <- intersect(me_diff_neus, wagner_diff_neus)
+
+common_deg_length_list_2[["diff_neus"]] <- length(common_diff_neus)
+```
+
+```{r include=TRUE}
+# 15
+me_diff_neu_eomesa <- rownames(marker_df_list_2$diff_neu_eomesa)[1:20]
+wagner_diff_neu_eomesa <- c('tbr1b', 'eomesa', 'celf3a', 'elavl3', 'stmn1b', 'rtn1a', 'r3hdm1', 'celf2', 'bcl11ba', 'islr2', 'sox4a', 'myt1a', 'ckbb', 'camk2d2', 'cbfa2t3', 'elavl4', 'foxg1a', 'celf5a', 'neurod6b', 'pbx3b', '', 'tbr1b', 'eomesa', 'celf3a', 'stmn1b', 'rtn1a', 'elavl3', 'islr2', 'bcl11ba', 'sox4a', 'r3hdm1', 'myt1a', 'celf2', 'ckbb', 'camk2d2', 'elavl4', 'foxg1a', 'cbfa2t3', 'celf5a', 'neurod6b', 'pbx3b')
+
+common_diff_neu_eomesa <- intersect(me_diff_neu_eomesa, wagner_diff_neu_eomesa)
+
+common_deg_length_list_2[["diff_neu_eomesa"]] <- length(common_diff_neu_eomesa)
+```
+
+```{r include=TRUE}
+# 15
+me_diff_neu_sst1_1 <- rownames(marker_df_list_2$diff_neu_sst1_1)[1:20]
+wagner_diff_neu_sst1_1 <- c('scg3', 'im:7138475', 'tal2', 'gad2', 'rhpn2', 'gata3', 'nppc', 'myo3b', 'gad1b', 'ldlrad2', 'gpm6ab', 'slc32a1', 'sox1b', 'atp1a3b', 'sst1.1', 'nkx6.1', 'cpe', 'zgc:175128', 'si:ch1073-70f20.1', 'urp1', '', 'im:7138475', 'myo3b', 'scg3', 'gad1b', 'tal2', 'nppc', 'sst1.1', 'slc32a1', 'rhpn2', 'gata3', 'sox1b', 'atp1a3b', 'ldlrad2', 'gpm6ab', 'nkx6.1', 'si:ch1073-70f20.1', 'urp1', 'zgc:175128', 'cpe', 'gad2')
+
+common_diff_neu_sst1_1 <- intersect(me_diff_neu_sst1_1, wagner_diff_neu_sst1_1)
+
+common_deg_length_list_2[["diff_neu_sst1_1"]] <- length(common_diff_neu_sst1_1)
+```
+
+```{r include=TRUE}
+# 17
+me_diff_neu_rohon_beard <- rownames(marker_df_list_2$diff_neu_rohon_beard)[1:20]
+wagner_diff_neu_rohon_beard <- c('tuba8l3', 'neurod1', 'six1b', 'zgc:158291', 'cdh6', 'pcbp4', 'ebf3', 'onecut1', 'onecutl', 'elavl3', 'si:ch73-199e17.1', 'insm1b', 'dlb', 'vim', 'tnw', 'eya2', 'tlx2', 'kctd12.2', 'eya4', 'alcama', '', 'neurod1', 'zgc:158291', 'six1b', 'cdh6', 'tuba8l3', 'pcbp4', 'ebf3', 'onecutl', 'onecut1', 'insm1b', 'tnw', 'si:ch73-199e17.1', 'tlx2', 'kctd12.2', 'dlb', 'eya4', 'eya2', 'vim', 'elavl3', 'alcama')
+
+common_diff_neu_rohon_beard <- intersect(me_diff_neu_rohon_beard, wagner_diff_neu_rohon_beard)
+
+common_deg_length_list_2[["diff_neu_rohon_beard"]] <- length(common_diff_neu_rohon_beard)
+```
+
+```{r include=TRUE}
+# 9/39
+me_nc_nc_mcamb_irid <- rownames(marker_df_list_2$nc_nc_mcamb_irid)[1:20]
+
+wagner_nc_mcamb <- c('ednrab', 'sox10', 'crestin', 'foxd3', 'tuba8l3', 'erbb3b', 'pmp22a', 'tfap2a', 'LOC103910711', 'reck', 'mcamb', 'slc1a3a', 'fxyd1', 'qkia', 'nr2f5', 'cdh6', 'zeb2a', 'LOC103908616', 'magi1b', 'LOC100003669', '', 'ednrab', 'sox10', 'foxd3', 'erbb3b', 'LOC103910711', 'crestin', 'mcamb', 'tfap2a', 'fxyd1', 'pmp22a', 'reck', 'tuba8l3', 'slc1a3a', 'fabp3', 'nr2f5', 'cdh6', 'qkia', 'LOC103908616', 'LOC100003669', 'zeb2a')
+
+wagner_nc_irid <- c('crestin', 'gmps', 'apoda.1', 'si:ch211-243a20.3', 'defbl1', 'si:dkey-197i20.6', 'pnp4a', 'impdh1b', 'sox10', 'ltk', 'paics', 'alx4a', 'zgc:110591', 'gpr143', 'si:dkey-226k3.4', 'LOC103910711', 'pgm2', 'si:ch211-256m1.8', 'zgc:77517', 'tspan36', '', 'apoda.1', 'defbl1', 'si:dkey-197i20.6', 'si:ch211-243a20.3', 'pnp4a', 'gpr143', 'ltk', 'sox10', 'alx4a', 'LOC103910711', 'si:ch211-256m1.8', 'zgc:110591', 'si:dkey-226k3.4', 'zgc:77517', 'crestin', 'pgm2', 'impdh1b', 'gmps', 'tspan36', 'paics')
+
+# 9/39  
+wagner_nc_nc_mcamb_irid <- unique(c(wagner_nc_mcamb, wagner_nc_irid))
+
+common_nc_nc_mcamb_irid <- intersect(me_nc_nc_mcamb_irid, wagner_nc_nc_mcamb_irid)
+
+common_deg_length_list_2[["nc_nc_mcamb_irid"]] <- length(common_nc_nc_mcamb_irid)
+
+special_cell_type_vec_2 <- c(special_cell_type_vec_2, "nc_nc_mcamb_irid")
+```
+
+
+```{r include=TRUE}
+# 17/37
+me_nc_xanth_mel <- rownames(marker_df_list_2$nc_xanth_mel)[1:20]
+
+wagner_nc_xanth <- c('impdh1b', 'paics', 'gch2', 'gmps', 'prdx1', 'wu:fc46h12', 'slc2a11b', 'akr1b1', 'LOC100536795', 'slc22a7a', 'si:dkey-251i10.2', 'slc2a15b', 'tmem130', 'cax1', 'gpd1b', 'pah', 'bscl2l', 'tspan36', 'g6pc3', 'rbp4l', '', 'slc22a7a', 'tmem130', 'slc2a15b', 'wu:fc46h12', 'gch2', 'akr1b1', 'cax1', 'bscl2l', 'pah', 'si:dkey-251i10.2', 'slc2a11b', 'rbp4l', 'g6pc3', 'gpd1b', 'tspan36', 'LOC100536795', 'impdh1b', 'prdx1', 'gmps', 'paics')
+
+wagner_nc_mel <- c('atp6v0ca', 'atp6v1g1', 'gstp1', 'tspan36', 'LOC103911087', 'slc45a2', 'si:ch211-102c2.5', 'slc37a2', 'tyrp1b', 'pah', 'tyrp1a', 'dct', 'pmela', 'zgc:91968', 'crestin', 'pcbd1', 'si:dkey-226k3.4', 'akr1b1', 'gch2', 'mitfa', '', 'tyrp1b', 'dct', 'slc45a2', 'tyrp1a', 'LOC103911087', 'pah', 'pmela', 'gch2', 'akr1b1', 'mitfa', 'zgc:91968', 'si:dkey-226k3.4', 'tspan36', 'si:ch211-102c2.5', 'pcbd1', 'slc37a2', 'crestin', 'gstp1', 'atp6v1g1', 'atp6v0ca')
+
+# 17/37
+wagner_nc_xanth_mel <- unique(c(wagner_nc_xanth, wagner_nc_mel))
+
+common_nc_xanth_mel <- intersect(me_nc_xanth_mel, wagner_nc_xanth_mel)
+
+common_deg_length_list_2[["nc_xanth_mel"]] <- length(common_nc_xanth_mel)
+
+special_cell_type_vec_2 <- c(special_cell_type_vec_2, "nc_xanth_mel")
+```
+
+```{r include=TRUE}
+# 17
+me_nc_grem2 <- rownames(marker_df_list_2$nc_grem2)[1:20]
+wagner_nc_grem2 <- c('pmp22a', 'twist1a', 'si:dkey-261h17.1', 'ednrab', 'grem2b', 'her6', 'grem2', 'dlx2a', 'npm1a', 'snai1a', 'fli1a', 'hey1', 'ncl', 'foxc1b', 'barx1', 'pcbd1', 'dlx5a', 'vasna', 'dlx3b', 'hand2', '', 'pmp22a', 'twist1a', 'ednrab', 'grem2b', 'grem2', 'si:dkey-261h17.1', 'her6', 'dlx2a', 'snai1a', 'npm1a', 'hey1', 'fli1a', 'foxc1b', 'ncl', 'barx1', 'pcbd1', 'dlx5a', 'vasna', 'dlx3b', 'hand2')
+
+common_nc_grem2 <- intersect(me_nc_grem2, wagner_nc_grem2)
+
+common_deg_length_list_2[["nc_grem2"]] <- length(common_nc_grem2)
+```
+
 """
 Chunk 3: Neural 
+
+Validations skipped! 
 """
 
 # (1) Get cells (3)
@@ -336,9 +623,12 @@ top50_vector_4 <- c(rownames(marker_df_list_4$lens),
                     rownames(marker_df_list_4$peri),
                     rownames(marker_df_list_4$latline),
                     rownames(marker_df_list_4$pec_fin_bud))
-
 ```
 
+# Trying to get DEGs and format them for convenience for munging
+```{r include=TRUE}
+write.csv(file="noto", x=rownames(marker_df_list_4$lens), row.names = FALSE)
+```
 
 # (4) Make Heatmap (4)
 ```{r include=TRUE}
@@ -348,4 +638,191 @@ DoHeatmap(object = zeb_integrated_50,
           slot = "data",
           size = 2)
 ```
+
+# Validations (4)
+```{r include=TRUE}
+common_deg_length_list_4 <- list()
+special_cell_type_vec_4 <- c()
+```
+
+# Cell Type 4 Flags (12 of them)
+```{r include=TRUE}
+# 16
+me_lens <- rownames(marker_df_list_4$lens)[1:20]
+wagner_lens <- c('fabp11a', 'crybb1', 'tgfb3', 'vcana', 'hmx4', 'pitx3', 'lim2.1', 'cryba1l1', 'cryba4', 'si:ch211-152c2.3', 'aldocb', 'rbm24a', 'cryba2a', 'bcl2l13', 'cryba1b', 'crygn2', 'sh3tc1', 'crybb1l1', 'crybb1l2', 'cryba2b', '', 'crybb1', 'vcana', 'tgfb3', 'pitx3', 'hmx4', 'lim2.1', 'cryba1l1', 'cryba4', 'fabp11a', 'si:ch211-152c2.3', 'aldocb', 'rbm24a', 'cryba2a', 'cryba1b', 'crygn2', 'bcl2l13', 'crybb1l1', 'crybb1l2', 'cryba2b', 'sh3tc1')
+
+common_lens <- intersect(me_lens, wagner_lens)
+
+common_deg_length_list_4[["lens"]] <- length(common_lens)
+```
+
+```{r include=TRUE}
+# 8
+me_optic_cup <- rownames(marker_df_list_4$optic_cup)[1:20]
+wagner_optic_cup <- c('rx1', 'six3b', 'ncl', 'pcna', 'cad', 'nap1l1', 'fabp7a', 'tktb', 'hspe1', 'ahcy', 'npm1a', 'fbl', 'ppa1b', 'myca', 'pax6b', 'c1qbp', 'dkc1', 'ascl1a', 'hspd1', 'LOC795545', '', 'rx1', 'six3b', 'cad', 'ncl', 'nap1l1', 'pcna', 'tktb', 'fabp7a', 'hspe1', 'npm1a', 'ahcy', 'fbl', 'ppa1b', 'myca', 'pax6b', 'c1qbp', 'dkc1', 'ascl1a', 'hspd1', 'LOC795545')
+
+common_optic_cup <- intersect(me_optic_cup, wagner_optic_cup)
+
+common_deg_length_list_4[["optic_cup"]] <- length(common_optic_cup)
+```
+
+```{r include=TRUE}
+# 18
+me_rpe <- rownames(marker_df_list_4$rpe)[1:20]
+wagner_rpe <- c('fabp11a', 'pmela', 'dct', 'LOC103911087', 'cx43', 'pmelb', 'tspan36', 'gstp1', 'bhlhe40', 'tyrp1a', 'slc45a2', 'tyrp1b', 'col9a1b', 'trpm1b', 'stra6', 'rbm47', 'ctsba', 'pcbd1', 'pah', 'ppcdc', '', 'pmela', 'dct', 'LOC103911087', 'pmelb', 'tyrp1a', 'fabp11a', 'slc45a2', 'cx43', 'tyrp1b', 'col9a1b', 'tspan36', 'bhlhe40', 'trpm1b', 'rbm47', 'stra6', 'gstp1', 'pcbd1', 'ctsba', 'pah', 'ppcdc')
+
+common_rpe <- intersect(me_rpe, wagner_rpe)
+
+common_deg_length_list_4[["rpe"]] <- length(common_rpe)
+```
+
+```{r include=TRUE}
+# 16
+me_otic_plac <- rownames(marker_df_list_4$otic_plac)[1:20]
+wagner_otic_plac <- c('stm', 'si:dkey-222f2.1', 'oc90', 'sox10', 'si:ch211-152c2.3', 'cldna', 'si:ch211-80h18.1', 'cldnb', 'ptbp1b', 'efhd1', 'epcam', 'sparc', 'LOC101886004', 'agr2', 'col2a1a', 'f11r.1', 'otop1', 'six1b', 'eya1', 'cldnj', '', 'stm', 'si:dkey-222f2.1', 'sox10', 'cldna', 'oc90', 'si:ch211-152c2.3', 'si:ch211-80h18.1', 'efhd1', 'LOC101886004', 'otop1', 'cldnb', 'six1b', 'epcam', 'f11r.1', 'agr2', 'col2a1a', 'cldnj', 'eya1', 'sparc', 'ptbp1b')
+
+common_otic_plac <- intersect(me_otic_plac, wagner_otic_plac)
+
+common_deg_length_list_4[["otic_plac"]] <- length(common_otic_plac)
+```
+
+```{r include=TRUE}
+# 19
+me_iono <- rownames(marker_df_list_4$iono)[1:20]
+wagner_iono <- c('atp6v0ca', 'atp6v1ba', 'atp6v1g1', 'atp6v1aa', 'LOC569335', 'atp6ap1b', 'atp6v0a1a', 'foxi3a', 'ca15a', 'nqo1', 'atp6v1f', 'ceacam1', 'zgc:158222', 'atp6v1h', 'atp6v1e1b', 'rnaseka', 'cldnh', 'ca2', 'icn', 'zgc:198419', '', 'foxi3a', 'ca15a', 'ceacam1', 'LOC569335', 'zgc:158222', 'cldnh', 'nqo1', 'ca2', 'atp6v0a1a', 'icn', 'atp6v1aa', 'rnaseka', 'atp6v1e1b', 'zgc:198419', 'atp6v1h', 'atp6ap1b', 'atp6v1f', 'atp6v1ba', 'atp6v1g1', 'atp6v0ca')
+
+common_iono <- intersect(me_iono, wagner_iono)
+
+common_deg_length_list_4[["iono"]] <- length(common_iono)
+```
+
+```{r include=TRUE}
+# 17
+me_leuko <- rownames(marker_df_list_4$leuko)[1:20]
+wagner_leuko <- c('cd63', 'lyz', 'lta4h', 'ncf1', 'papss2b', 'coro1a', 'srgn', 'si:ch1073-429i10.1', 'mpx', 'ch25hl2', 'sms', 'LOC100537803', 'sult2st1', 'lcp1', 'npsn', 'arpc1b', 'pfn1', 'cotl1', 'gsto2', 'mmp13a', '', 'ch25hl2', 'ncf1', 'si:ch1073-429i10.1', 'lyz', 'coro1a', 'lcp1', 'srgn', 'LOC100537803', 'npsn', 'mpx', 'mmp13a', 'arpc1b', 'gsto2', 'papss2b', 'sult2st1', 'sms', 'lta4h', 'cotl1', 'pfn1', 'cd63')
+
+common_leuko <- intersect(me_leuko, wagner_leuko)
+
+common_deg_length_list_4[["leuko"]] <- length(common_leuko)
+```
+
+```{r include=TRUE}
+# 19
+me_eryth <- rownames(marker_df_list_4$eryth)[1:20]
+wagner_eryth <- c('si:ch211-5k11.12', 'hbae3', 'hbbe1.1', 'hbbe3', 'MGC173646', 'LOC100334599', 'si:ch211-5k11.2', 'hbae1', 'slc4a1a', 'LOC100537766', 'cahz', 'hbbe2', 'alas2', 'tspo', 'si:dkey-25o16.2', 'blvrb', 'cpox', 'nt5c2l1', 'urod', 'hmbsa', '', 'si:ch211-5k11.12', 'hbae3', 'hbbe1.1', 'hbbe3', 'MGC173646', 'LOC100334599', 'si:ch211-5k11.2', 'hbae1', 'slc4a1a', 'LOC100537766', 'cahz', 'hbbe2', 'alas2', 'tspo', 'si:dkey-25o16.2', 'blvrb', 'cpox', 'nt5c2l1', 'urod', 'hmbsa')
+
+common_eryth <- intersect(me_eryth, wagner_eryth)
+
+common_deg_length_list_4[["eryth"]] <- length(common_eryth)
+```
+
+```{r include=TRUE}
+# 17
+me_macro <- rownames(marker_df_list_4$macro)[1:20]
+wagner_macro <- c('ctsba', 'cd63', 'LOC100537803', 'lcp1', 'cotl1', 'coro1a', 'arpc1b', 'ctssb.1', 'mfap4', 'arhgdig', 'pfn1', 'lgals2a', 'havcr1', 'f13a1b', 'ctssb.2', 'zgc:173915', 'tspan36', 'LOC797571', 'cebpb', 'LOC103909263', '', 'ctssb.1', 'lcp1', 'coro1a', 'mfap4', 'LOC100537803', 'havcr1', 'lgals2a', 'ctssb.2', 'arpc1b', 'zgc:173915', 'LOC797571', 'cebpb', 'f13a1b', 'arhgdig', 'tspan36', 'cotl1', 'LOC103909263', 'pfn1', 'ctsba', 'cd63')
+
+common_macro <- intersect(me_macro, wagner_macro)
+
+common_deg_length_list_4[["macro"]] <- length(common_macro)
+```
+
+```{r include=TRUE}
+# 16
+me_meso <- rownames(marker_df_list_4$meso)[1:20]
+wagner_meso <- c('col5a2a', 'vwde', 'emp2', 'col5a1', 'thbs4b', 'col1a2', 'col1a1b', 'angptl7', 'tgfbi', 'col1a1a', 'postnb', 'aldh1a2', 'col11a1b', 'efemp2b', 'vcanb', 'meox1', 'rdh10a', 'LOC103909969', 'rbp5', 'apoc1l', '', 'vwde', 'col5a2a', 'thbs4b', 'emp2', 'angptl7', 'col1a1b', 'col1a2', 'col5a1', 'tgfbi', 'col1a1a', 'postnb', 'aldh1a2', 'col11a1b', 'efemp2b', 'vcanb', 'LOC103909969', 'rdh10a', 'meox1', 'apoc1l', 'rbp5')
+
+common_meso <- intersect(me_meso, wagner_meso)
+
+common_deg_length_list_4[["meso"]] <- length(common_meso)
+```
+
+```{r include=TRUE}
+# 17
+me_peri <- rownames(marker_df_list_4$peri)[1:20]
+wagner_peri <- c('cyt1l', 'krt4', 'cyt1', 'wu:fb18f06', 'anxa1c', 'cst14b.1', 'krt17', 'si:ch211-195b11.3', 'zgc:193505', 'si:ch211-157c3.4', 'zgc:110283', 'krt5', 'icn2', 'agr1', 'zgc:109868', 'lye', 'icn', 'LOC100537515', 'cldne', 'zgc:113413', '', 'si:ch211-157c3.4', 'anxa1c', 'zgc:110283', 'zgc:193505', 'krt17', 'agr1', 'zgc:109868', 'LOC100537515', 'si:ch211-195b11.3', 'wu:fb18f06', 'icn2', 'lye', 'krt5', 'cldne', 'cst14b.1', 'cyt1l', 'cyt1', 'icn', 'krt4', 'zgc:113413')
+
+common_peri <- intersect(me_peri, wagner_peri)
+
+common_deg_length_list_4[["peri"]] <- length(common_peri)
+```
+
+```{r include=TRUE}
+# 5
+me_latline <- rownames(marker_df_list_4$latline)[1:20]
+wagner_latline <- c('krt15', 'eya1', 'cldnb', 'hmx3', 'hmx3a', 'epcam', 'gsnb', 'si:dkey-222f2.1', 'igsf9', 'plcd1b', 'zgc:77517', 'tfap2a', 'si:ch211-152c2.3', 'cldn7b', 'spint2', 'sdprb', 'igfbp5b', 'f11r.1', 'tmprss5', 'hey1', '', 'krt15', 'hmx3', 'hmx3a', 'si:dkey-222f2.1', 'cldnb', 'eya1', 'gsnb', 'epcam', 'tmprss5', 'si:ch211-152c2.3', 'plcd1b', 'tfap2a', 'spint2', 'cldn7b', 'zgc:77517', 'f11r.1', 'sdprb', 'igfbp5b', 'igsf9', 'hey1')
+
+common_latline <- intersect(me_latline, wagner_latline)
+
+common_deg_length_list_4[["latline"]] <- length(common_latline)
+```
+
+```{r include=TRUE}
+# 17
+me_pec_fin_bud <- rownames(marker_df_list_4$pec_fin_bud)[1:20]
+wagner_pec_fin_bud <- c('pcolcea', 'hand2', 'cfd', 'pitx1', 'si:dkey-261h17.1', 'ftr82', 'col5a1', 'pmp22a', 'tmem88b', 'col7a1l', 'entpd1', 'zgc:172136', 'LOC101886266', 'si:ch211-201m7.3', 'col5a2a', 'col6a3', 'twist1a', 'fn1b', 'slit3', 'rdh10a', '', 'pcolcea', 'hand2', 'cfd', 'pitx1', 'si:dkey-261h17.1', 'ftr82', 'tmem88b', 'col5a1', 'col7a1l', 'pmp22a', 'entpd1', 'LOC101886266', 'zgc:172136', 'col5a2a', 'col6a3', 'si:ch211-201m7.3', 'twist1a', 'fn1b', 'slit3', 'rdh10a')
+
+common_pec_fin_bud <- intersect(me_pec_fin_bud, wagner_pec_fin_bud)
+
+common_deg_length_list_4[["pec_fin_bud"]] <- length(common_pec_fin_bud)
+```
+
+
+"""
+Validations 2: Get distribution of DEGs in Common
+
+I did a great job in Cluster ID! 
+"""
+
+```{r include=TRUE}
+common_deg_counts <- c(unlist(common_deg_length_list_1),
+                       unlist(common_deg_length_list_2),
+                       unlist(common_deg_length_list_4))
+
+common_deg_count_hist <- hist(common_deg_counts)
+
+cat("median counts = ", median(common_deg_counts), "\n\n")
+cat("counts in each bin = ", common_deg_count_hist$counts)
+
+```
+
+
+"""
+Unused Implementation
+"""
+```{r include=TRUE}
+# 4
+a <- matrix(0, ncol=50, nrow=1)
+a_df <- as.data.frame(a)
+
+for (i in 1:length(cell_type_flags_4)) {
+  a_df <- rbind(a_df, rownames(marker_df_list_4[[i]]))
+}
+
+a_df <- a_df[-1, ]
+rownames(a_df) <- cell_type_flags_4
+
+#####
+
+# 3
+b <- matrix(0, ncol=50, nrow=1)
+b_df <- as.data.frame(b)
+
+for (i in 1:length(cell_type_flags_3)) {
+  b_df <- rbind(b_df, rownames(marker_df_list_3[[i]]))
+}
+
+b_df <- b_df[-1, ]
+
+rownames(b_df) <- cell_type_flags_3
+
+master_df <- rbind(a_df, b_df)
+
+# a_df <- rbind(rownames(marker_df_list_4$lens))
+```
+
+```{r include=TRUE}
+write.csv(x=master_df, file="master_df.csv")
+```
+
+
 
