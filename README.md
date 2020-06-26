@@ -74,7 +74,7 @@ munging_code directory
 TO DO: Make many_many list
 NOTE: THIS TOOK 3 HOURS TO RUN!
 
-(3) get_one_to_one_gene_lists.py
+(3) get_one_to_one_gene_lists_v1.py
 -Uses above dictionaries, unique_ciona_deg_vec, unique_zeb_deg_vec
  to make ciona_khid_list (6) and zeb_gene list (6), which are copy/pasted back into get_pairwise_zeb_ciona_degs.Rmd as ciona_ortho_KHID_vec and zeb_ortho_gene_vec.
 

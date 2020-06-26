@@ -8,20 +8,19 @@ output: html_document
 
 # Works in parallel with: None.
 
-# General Description: Script implements various methods to get gene set
-# to be used for downstream cross-species cell type comparisons. 
+# General Description: Script gets pairwise DEGs for Ciona and Zeb. First attempt to identify 1-1 Ortholog DEGs (only 6).
 
 # Uses env_get_pairwise_zeb_ciona_degs.RData
 
 ## Module v1: Tosches 
 # (1) Generates unique_ciona_deg_vec (444) and unique_zeb_deg_vec (1372) from supersets of top50 pairwise DEGs (Tosches Method).
-# (2) These vectors are manipulated in "get_one_to_one_gene_lists.py" to make
+# (2) These vectors are manipulated in "get_geneset_v1.py" to make
 #     unique_ciona_KHID_vec and zeb_ortho_gene_vec
 # (3) Expression patterns are visualized in Ciona tissues
 #     and Zeb notochord.
-# (4) First exploratory analyses of 10/top50 Ciona notochord DEGs are performed. 
+# (4) First exploratory analyses of 10/top50 Ciona notochord DEGs are performed.
 
-# TO DO Segways into 
+# Segways into "get_gene_set_troubleshooting.Rmd" because I only got 6 genes in common.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -37,7 +36,7 @@ library(pvclust)
 ```
 
 """
-v1 Module Start
+v1 Module (Tosches 1) Start: 
 """
 
 """
@@ -93,6 +92,7 @@ unique_test_ciona_deg_vec <- unique(test_ciona_deg_vec)
 # 444
 unique_ciona_deg_vec <- unique_test_ciona_deg_vec
 ```
+
 """
 Let's get all pairwise-cluster DEGs in Zebrafish
 """
@@ -160,6 +160,7 @@ DoHeatmap(object = clean_chen_larva_integrated_20,
           slot = "data",
           size = 2)
 ```
+
 ```{r include=TRUE}
 DoHeatmap(object = clean_chen_larva_integrated_20,
           features = ciona_ortho_KHID_vec,
@@ -246,7 +247,10 @@ write.csv(rownames(ciona_noto_top50_markers), "ciona_noto_top50_markers.csv", ro
 ciona_ortho_KHID_vec <- c("KH2012:KH.C3.724", "KH2012:KH.L107.7", "KH2012:KH.C5.302", "KH2012:KH.C1.1067", "KH2012:KH.C7.633", "KH2012:KH.C11.2")
 ```
 
-# Exploratory Questions
+"""
+Exploratory Questions
+"""
+
 # (Ciona) Are any of these in top50 DEGs for Ciona Noto?
 ```{r include=TRUE}
 # Yes!!
@@ -254,7 +258,6 @@ ciona_ortho_KHID_vec <- c("KH2012:KH.C3.724", "KH2012:KH.L107.7", "KH2012:KH.C5.
 if (any(ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers))) {
   print(ciona_ortho_KHID_vec[ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers)])
 } 
-
 # KH2012:KH.C3.724, COL1A1/2
 
 # KH2012:KH.C7.633, COL1A1/2
@@ -323,18 +326,3 @@ ciona_noto_top10_markers[10]
 
 ```
 
-"""
-TO DO
-"""
-
-# (Zeb) Are any of these in top50 DEGs for Zeb Noto?
-```{r include=TRUE}
-# No :(
-zeb_true_vec <- zeb_ortho_gene_vec %in% ciona_noto_top50_markers
-```
-
-# (Ciona) What are the first 10 markers?
-```{r include=TRUE}
-
-
-```
