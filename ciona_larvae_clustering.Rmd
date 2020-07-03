@@ -28,7 +28,7 @@ output: html_document
 # but will subset UNSCALED seurats for use in Integration. 
 
 ## Make Integrated Seurat Object
-# (7) chen_larva*_seurats -> Integration -> clean_chen_larva_integrated_20.
+# (7) clean_chen_larva*_seurats -> Integration -> clean_chen_larva_integrated_20.
 # (8) integrated_seurat is Scaled -> ... -> Cluster.
 # (9) Tissues are mapped. Unmapped tissues are also recorded .
 
@@ -521,7 +521,7 @@ FeaturePlot(object = clean_chen_larva_integrated_20,
 Let us now make lists of cells
 """
 ```{r include=TRUE}
-# 3237
+# 3274
 ciona_larva_endo <- WhichCells(clean_chen_larva_integrated_20,
                                idents = c(12, 2, 20, 3, 0))
 # 1959

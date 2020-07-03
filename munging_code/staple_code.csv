@@ -30,6 +30,12 @@ for elem in results:
 
 csvfile.close()
 
+(5) How to write out a dictionary into a .csv file.
+
+with open(output_dir+output_file_name, "w") as csvfile:
+    csvwriter = csv.writer(csvfile)
+    for key, value in vis_dict.items():
+        csvwriter.writerow([key, value])
 
 ###
 

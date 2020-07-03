@@ -1,0 +1,12 @@
+README
+get_geneset_attempts
+
+v1: 1-1 Orthologs among DEGs
+
+v2: Incorrect implementation of v3. 
+-Idea was to get KHIDs and zeb gene names for 2993 keys in ONE_TO_ONE_ORTHO_DICT, and then see which of these are expressed in ciona and zeb.
+-Issue was that I used human gene names not zeb gene names.
+
+v3:
+-Made ONE_TO_ONE_KHID_ZEB_GENE_DICT.
+ 
