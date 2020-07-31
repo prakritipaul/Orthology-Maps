@@ -1,0 +1,525 @@
+---
+title: "get_geneset_v4"
+output: html_document
+---
+
+# Follows from: "get_geneset_troubleshooting.Rmd".
+
+# Works in parallel with: None.
+
+# General Description: Implements module v4:
+# Run Tosches workflow (NEW IMPLEMENTATION) from "get_geneset_troubleshooting.Rmd" on all unflitered 1-1 orthologs. 
+
+# khid_list and zeb_genes <- "make_one_to_one_khid_zeb_gene_dict.py" <- Ensembl 1-1 mapped orthologs.   
+# Note: Some functions will need to be repurposed to get matrices of interest.
+
+# They have new names: one2one2_khid_list and one2one_zeb_genes in "validate_get_geneset_v4.Rmd"
+# because they become "generalized" variables. 
+
+# Segways into: "validate_get_geneset_v4.Rmd"
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r include=TRUE}
+'%notin%' <- Negate('%in%')
+```
+
+"""
+Helper Function to make Gene Specificity Matrix (Tosches)
+"""
+```{r include=TRUE}
+make_gene_specificity_matrix <- function(average_expression_matrix) {
+  # Given an average expression matrix, convert to a gene specificity matrix (Tosches)
+  # Args:
+  #   average_expression_matrix: 
+  #       e.g. ciona_average_expression_matrix <- cbind(ciona_df_1, ciona_df_2)
+  #
+  # Routine:
+  #     g_c/(1/N)sum(i in C)g_i
+  #
+  # Returns:
+  #   gsm: Output of above routine.
+  gsm_1 <- average_expression_matrix
+  # makes new column with  mean of the row (average expression of gene across all cell types)
+  gsm_1 <- gsm_1 %>% mutate(gene_CTs_avexp = rowMeans(.))
+  num_cell_types <- ncol(gsm_1)-1
+  gsm <- gsm_1[, 1:num_cell_types]/gsm_1[, num_cell_types+1]
+  
+  return(gsm)
+}
+```
+
+
+""""""""""""""""""""""""""""""""
+Workflow
+""""""""""""""""""""""""""""""""
+
+"""
+Get data matrices using all qualified genes (2600).
+These are unique unfiltered 1-1 orthologs.
+"""
+
+# Get all unfiltered genes.
+```{r include=TRUE}
+# 30677 x 34750
+zeb_data <- zeb_integrated_50[["RNA"]]@data
+zeb_rownames <- rownames(zeb_data)
+# 2600
+common_zeb_genes <- intersect(zeb_rownames, zeb_genes)
+
+# 14433 x 12005
+ciona_data <- clean_chen_larva_integrated_20[["RNA"]]@data
+ciona_rownames <- rownames(ciona_data)
+# 2956
+common_ciona_khids <- intersect(ciona_rownames, khid_list)
+```
+
+# Get their indices.
+# Zeb 
+```{r include=TRUE}
+# 2602
+qualified_zeb_indices <- which(zeb_genes %in% zeb_rownames)
+
+dup_zeb_genes <- duplicated(zeb_genes)
+# Duplicated indices: 2186, 2287
+dup_zeb_indices <- which(dup_zeb_genes == TRUE)
+validate_dup_zeb_genes <- zeb_genes[dup_zeb_indices]
+
+# 2600
+qualified_zeb_indices <- qualified_zeb_indices[qualified_zeb_indices %notin% dup_zeb_indices]
+```
+
+# Ciona 
+```{r include=TRUE}
+# 2965
+qualified_ciona_indices <- which(khid_list %in% ciona_rownames)
+
+dup_ciona_genes <- duplicated(khid_list)
+# Duplicated indices: None.
+dup_ciona_indices <- which(dup_ciona_genes == TRUE)
+validate_dup_ciona_genes <- khid_list[dup_ciona_indices]
+
+# 2956
+qualified_ciona_indices <- qualified_ciona_indices[qualified_ciona_indices %notin% dup_ciona_indices]
+```
+
+# Which indices are in common?
+```{r include=TRUE}
+# 2592
+common_indices <- intersect(qualified_zeb_indices, qualified_ciona_indices)
+```
+
+# Get qualified genes.
+```{r include=TRUE}
+qualified_zeb_genes <- zeb_genes[common_indices]
+qualified_ciona_khids <- khid_list[common_indices]
+```
+
+"""
+Ciona: Make Average Expression Dataframes for Ciona CTs (7).
+ciona_avexp_df_v4 = ciona_df
+"""
+
+```{r include=TRUE}
+ciona_dummy_col <- rep(0, length(qualified_ciona_khids))
+ciona_df <- data.frame(ciona_dummy=ciona_dummy_col)
+
+for (i in 1:length(ciona_cell_type_list)) {
+  cat("i = ", i, "\n")
+  ciona_cells <- ciona_cell_type_list[[i]]
+  # Get gene exp values for all cells in a CT.
+  ciona_data_pre <- ciona_data[qualified_ciona_khids, ciona_cells]
+  ciona_data_df <- as.data.frame(ciona_data_pre)
+  # Get av exp for each gene for all CTs.
+  ciona_row <- rowMeans(ciona_data_df)
+  ciona_df <- cbind(ciona_df, ciona_row)
+}
+
+# Remove ciona_dummy column.
+ciona_df <- subset(ciona_df, select=-(ciona_dummy))
+
+ciona_colnames <- names(ciona_cell_type_list)
+colnames(ciona_df) <- ciona_colnames
+
+# The Average Expression Dataframe 
+ciona_avexp_df_v4 <- ciona_df
+```
+
+"""
+Zeb: Make Average Expression Dataframes for Zeb CTs (16).
+zeb_avexp_df_v4 = zeb_df
+
+These are the same CTs used in Module v3 in "get_geneset_troubleshooting.Rmd"
+"""
+```{r include=TRUE}
+zeb_cell_type_list_v4 <- list(noto = noto,
+                             heart_52 = heart_52,
+                             heart_51_56 = heart_51_56,
+                             muscles = muscles,
+                             epi_1 = epi_1,
+                             epi_2 = epi_2,
+                             panc_prim_endo = panc_prim_endo,
+                             meso = meso,
+                             pec_fin_bud = pec_fin_bud,
+                             ph_arch_ndnf = ph_arch_ndnf,
+                             iono = iono,
+                             leuko = leuko,
+                             lens = lens,
+                             optic_cup = optic_cup,
+                             diff_neus = diff_neus,
+                             nc_grem2 = nc_grem2)
+```
+                             
+```{r include=TRUE}
+zeb_dummy_col <- rep(0, length(qualified_zeb_genes))
+zeb_df <- data.frame(zeb_dummy=zeb_dummy_col)
+
+####
+
+for (i in 1:length(zeb_cell_type_list_v4)) {
+  cat("i = ", i, "\n")
+  zeb_cells <- zeb_cell_type_list_v4[[i]]
+  # Get gene exp values for all cells in a CT.
+  zeb_data_pre <- zeb_data[qualified_zeb_genes, zeb_cells]
+  zeb_data_df <- as.data.frame(zeb_data_pre)
+  # Get av exp for each gene for all CTs.
+  zeb_row <- rowMeans(zeb_data_df)
+  zeb_df <- cbind(zeb_df, zeb_row)
+}
+
+# Remove ciona_dummy column.
+zeb_df <- subset(zeb_df, select=-(zeb_dummy))
+
+zeb_colnames <- names(zeb_cell_type_list_v4)
+colnames(zeb_df) <- zeb_colnames
+
+# The Average Expression Dataframe
+zeb_avexp_df_v4 <- zeb_df
+```
+
+"""
+Make the GSM Dataframes, Cor Df 
+"""
+```{r include=TRUE}
+ciona_gsm_v4 <- make_gene_specificity_matrix(ciona_avexp_df_v4)
+zeb_gsm_v4 <- make_gene_specificity_matrix(zeb_avexp_df_v4)
+
+cor_df_v4 <- make_cor_df(ciona_gsm_v4, zeb_gsm_v4)
+```
+
+```{r include=TRUE}
+cor_df_v4 <- cor_df_v4 %>% transform(cor = as.numeric(cor))
+```
+
+# Visualize
+```{r include=TRUE}
+# "RdYlBu", "PiYG"
+test_X = c("llama", "llama", "llama")
+test_Y = c("duck", "alpaca", "swan")
+test_vals <- c(1, 2, 3) 
+test_df <- data.frame(x=test_X, y=test_Y, vals=test_vals)
+  
+test_heatmap <- ggplot(data=test_df,
+                       aes(x=test_X, y=test_Y, fill=test_vals)) +
+                       geom_tile() +
+                       scale_fill_distiller(palette = "RdBu")
+
+# test_heatmap
+cor_df_v4_heatmap <- ggplot(data = cor_df_v4,
+                         aes(x=ciona_CTs, y=zeb_CTs, fill=cor)) +
+                         geom_tile() +
+                         scale_fill_distiller(palette = "RdBu")
+              
+
+cor_df_v4_heatmap
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Vary profile, Seurat Object ##
+```{r include=TRUE}
+ciona_txnptomic_profile <- final_khids
+
+# All tissues except for heart + muscle
+ciona_seurat_1 <- clean_chen_larva_integrated_20
+ciona_cluster_sizes_1 <- table(Idents(ciona_seurat_1))
+ciona_av_exp_matrix_1 <- make_av_exp_matrix(ciona_seurat_1, ciona_txnptomic_profile)
+
+# Heart + Muscle
+ciona_seurat_2 <- putative_hm_seurat
+ciona_cluster_sizes_2 <- table(Idents(ciona_seurat_2))
+ciona_av_exp_matrix_2 <- make_av_exp_matrix(ciona_seurat_2, ciona_txnptomic_profile)
+
+```
+"""
+All Tissues
+(ciona_cluster_num_list_1, ciona_CT_vec_list1)
+"""
+
+## This will vary depending on the Seurat Object used ##
+```{r include=TRUE}
+# 3274
+ciona_endo_cluster_nums <- c(12, 2, 20, 3, 0)
+# 1959
+ciona_epi_cluster_nums <- c(28, 5, 25, 4, 18, 19)
+# 4203
+ciona_mes_cluster_nums <- c(7, 30, 13, 21, 23, 1, 11, 22, 8, 10, 35, 14, 6)
+# 1033
+ciona_cns_cluster_nums <- c(26, 9, 15, 24)
+# 550
+ciona_noto_cluster_nums <- c(27)
+
+# Make this manually.
+ciona_cluster_num_list_1 <- list(endo = ciona_endo_cluster_nums,
+                               epi = ciona_epi_cluster_nums,
+                               mes = ciona_mes_cluster_nums,
+                               cns = ciona_cns_cluster_nums,
+                               noto = ciona_noto_cluster_nums)
+```
+
+```{r include=TRUE}
+ciona_CT_vec_list1 <- make_CT_vec_list(ciona_cluster_num_list_1, ciona_av_exp_matrix_1, ciona_cluster_sizes_1)
+```
+
+"""
+Heart + Muscle
+(ciona_cluster_num_list_2, ciona_CT_vec_list2)
+"""
+```{r include=TRUE}
+# 207
+ciona_heart_cluster_nums <- c(2, 1, 0)
+# 159
+ciona_mus_cluster_nums <- c(7, 4, 3, 6, 8)
+
+ciona_cluster_num_list_2 <- list(heart = ciona_heart_cluster_nums,
+                                 mus = ciona_mus_cluster_nums)
+```
+
+```{r include=TRUE}
+ciona_CT_vec_list2 <- make_CT_vec_list(ciona_cluster_num_list_2, ciona_av_exp_matrix_2, ciona_cluster_sizes_2)
+```
+
+"""
+Ciona Average Expression Matrix
+(ciona_average_expression_matrix)
+"""
+# Do manually.
+```{r include=TRUE}
+ciona_df_1 <- as.data.frame(do.call(cbind, ciona_CT_vec_list1))
+ciona_df_2 <- as.data.frame(do.call(cbind, ciona_CT_vec_list2))
+
+ciona_average_expression_matrix <- cbind(ciona_df_1, ciona_df_2)
+```
+
+"""
+Ciona Gene Specificity Matrix
+(ciona_gsm)
+"""
+```{r include=TRUE}
+ciona_gsm <- make_gene_specificity_matrix(ciona_average_expression_matrix)
+rownames(ciona_gsm) <- rownames(ciona_average_expression_matrix)
+```
+
+
+""""""""""""""""""""""""""""""""
+     ** DO FOR ZEBRAFISH ** 
+""""""""""""""""""""""""""""""""
+
+"""
+Common Zeb Variables
+"""
+## Vary profile ##
+```{r include=TRUE}
+zeb_txnptomic_profile <- final_zeb_genes
+
+# All tissues except for heart + muscle
+zeb_seurat <- zeb_integrated_50
+zeb_cluster_sizes <- table(Idents(zeb_seurat))
+zeb_av_exp_matrix <- make_av_exp_matrix(zeb_seurat, zeb_txnptomic_profile)
+```
+"""
+Select Zeb Tissues
+(zeb_cluster_num_list, zeb_CT_vec_list)
+"""
+## Can Vary Cell Types ##
+```{r include=TRUE}
+# Sanity Checks (4)
+zeb_noto_cluster_nums <- 7
+
+zeb_heart_52_cluster_nums <- 74 
+zeb_heart_51_56_cluster_nums <- 17 
+
+zeb_muscles_cluster_nums <- 37
+
+# Bulk tissue (2)
+zeb_epi_1_cluster_nums <- c(52, 31, 65, 14)
+zeb_epi_2_cluster_nums <- c(44, 45, 51) 
+zeb_panc_prim_endo_cluster_nums <- 73
+zeb_meso_cluster_names <- 46
+
+# Should have low correlation with Ciona tissues... (2)
+zeb_pec_fin_bud_cluster_nums <- 38
+zeb_ph_arch_ndnf_cluster_nums <- 33 
+
+# For fun (2)
+zeb_iono_cluster_nums <- 64 
+zeb_leuko_cluster_nums <- 67 
+
+# Neural and Optic Cell Types (4)
+zeb_lens_cluster_nums <- 57 
+zeb_optic_cup_cluster_nums <- c(12, 7, 3, 43)
+# Should be a "CNS Sanity Check"
+zeb_diff_neus_cluster_nums <- c(9, 47, 59, 27, 16, 68, 41)
+zeb_nc_grem2_cluster_nums <- 23
+
+# make this yourself 
+zeb_cluster_num_list <- list(noto = zeb_noto_cluster_nums,
+                             heart_52 = zeb_heart_52_cluster_nums,
+                             heart_51_56 = zeb_heart_51_56_cluster_nums,
+                             muscles = zeb_muscles_cluster_nums,
+                             epi_1 = zeb_epi_1_cluster_nums,
+                             epi_2 = zeb_epi_2_cluster_nums,
+                             panc_prim_endo = zeb_panc_prim_endo_cluster_nums,
+                             meso = zeb_meso_cluster_names,
+                             pec_fin_bud = zeb_pec_fin_bud_cluster_nums,
+                             ph_arch_ndnf = zeb_ph_arch_ndnf_cluster_nums,
+                             iono = zeb_iono_cluster_nums,
+                             leuko = zeb_leuko_cluster_nums,
+                             lens = zeb_lens_cluster_nums,
+                             optic_cup = zeb_optic_cup_cluster_nums,
+                             diff_neus = zeb_diff_neus_cluster_nums,
+                             nc_grem2 = zeb_nc_grem2_cluster_nums)
+```
+
+```{r include=TRUE}
+zeb_CT_vec_list <- make_CT_vec_list(zeb_cluster_num_list, zeb_av_exp_matrix, zeb_cluster_sizes)
+```
+
+"""
+Zeb Average Expression Matrix
+(zeb_average_expression_matrix)
+"""
+
+# Do manually.
+```{r include=TRUE}
+zeb_average_expression_matrix <- as.data.frame(do.call(cbind, zeb_CT_vec_list))
+```
+
+"""
+Zeb Gene Specificity Matrix
+(zeb_gsm)
+"""
+```{r include=TRUE}
+zeb_gsm <- make_gene_specificity_matrix(zeb_average_expression_matrix)
+rownames(zeb_gsm) <- rownames(zeb_average_expression_matrix)
+```
+
+"""""""""""""""""""""""""""
+Do Spearman Correlations!
+"""""""""""""""""""""""""""
+# Helper Function 
+```{r include=TRUE}
+make_cor_df <- function(ciona_gsm, zeb_gsm) {
+  cz_cor_df <- data.frame(ciona_CTs = 0,
+                             zeb_CTs = 0,
+                             cor = 0)
+  
+  for (i in 1:ncol(ciona_gsm)) {
+    for (j in 1:ncol(zeb_gsm)) {
+      # CT expression vectors 
+      ciona_CT_col <- ciona_gsm[, i]
+      zeb_CT_col <- zeb_gsm[, j]
+      # CT name
+      ciona_CT <- colnames(ciona_gsm)[i]
+      zeb_CT <- colnames(zeb_gsm)[j]
+      cat("i= ", i, "j= ", j, "ciona_CT= ", ciona_CT, "zeb_CT= ", zeb_CT, "\n")
+      cz_cor <- cor(ciona_CT_col, zeb_CT_col, method = "spearman")
+      cat("cor = ", cz_cor, "\n\n")
+      cz_row <- c(ciona_CT, zeb_CT, cz_cor)
+      cat("row = ", cz_row)
+      cz_cor_df <- rbind(cz_cor_df, cz_row)
+    }
+  }
+  cz_cor_df <- cz_cor_df[-1, ]
+  return(cz_cor_df)
+}
+```
+
+```{r include=TRUE}
+cz_cor_df <- make_cor_df(ciona_gsm, zeb_gsm)
+```
+
+```{r include=TRUE}
+cz_cor_df <- cz_cor_df %>% transform(cor = as.numeric(cor))
+```
+
+# Visualize
+```{r include=TRUE}
+# "RdYlBu", "PiYG"
+cz_cor_heatmap <- ggplot(data = cz_cor_df,
+                         aes(x=ciona_CTs, y=zeb_CTs, fill=cor)) + 
+                         scale_fill_distiller(palette = "RdBu")
+
+cz_cor_heatmap
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+Just in case tests (Also present in Journal "get_geneset_v4.Rmd")
+"""
+
+# USE THIS TEST
+```{r include=TRUE}
+test_index <- 20
+dummy_col <- rep(0, 20)
+test_ciona_df <- data.frame(dummy=dummy_col)
+
+for (i in 1:length(ciona_cell_type_list)) {
+  cat("i = ", i, "\n")
+  test_ciona_cells <- ciona_cell_type_list[[i]]
+  test_ciona_data <- ciona_data[qualified_ciona_khids, test_ciona_cells]
+  
+  test_ciona_data_df <- as.data.frame(test_ciona_data[1:test_index, 1:test_index])
+  test_ciona_row <- rowMeans(test_ciona_data_df)
+  test_ciona_df <- cbind(test_ciona_df, test_ciona_row)
+}
+test_ciona_colnames <- c("dummy", names(ciona_cell_type_list))
+colnames(test_ciona_df) <- test_ciona_colnames
+
+test_ciona_df
+
+```

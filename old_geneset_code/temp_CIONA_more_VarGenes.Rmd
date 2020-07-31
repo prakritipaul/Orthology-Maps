@@ -1,0 +1,80 @@
+---
+title: "temp_CIONA_more_VarGenes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Increase ciona_n_features - increase upper bound of DEGs that can be found # # dims=50, n_anchor_feats=8000, npcs=70 
+
+# Didn't end up doing this because zeb_8000 rendered only 128 1-1 DEG orthologs -> not worth it. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+library(edgeR)
+```
+
+# Markers 
+```{r include=TRUE}
+dopa_markers = c("KH2012:KH.C10.200", "KH2012:KH.C3.666")
+cns_markers = c("KH2012:KH.C14.4", "KH2012:KH.C1.127", "KH2012:KH.C7.59", "KH2012:KH.C6.224")
+noto_markers = c("KH2012:KH.C5.124", "KH2012:KH.C8.749")
+epi_markers = c("KH2012:KH.C1.611", "KH2012:KH.C8.844")
+mes_markers = c("KH2012:KH.C5.228", "KH2012:KH.C5.202", "KH2012:KH.C1.222")
+endo_markers = c("KH2012:KH.C5.227", "KH2012:KH.S1012.1")
+mus_markers = c("KH2012:KH.S423.6", "KH2012:KH.L116.38", "KH2012:KH.C7.504")
+# last 2 are HAND2s
+heart_markers = c("KH2012:KH.C7.205", "KH2012:KH.C1.1116", "KH2012:KH.C14.604")
+```
+
+##############################################################################
+
+"""
+Helper Functions
+"""
+
+(1) Make raw matrix data frames
+```{r include=TRUE}
+make_zeb_df <- function(zeb_dir) {
+  zeb_df <- read.table(zeb_dir,
+                       sep = ",",
+                       header = TRUE,
+                       stringsAsFactors = FALSE)
+  
+  rownames(zeb_df) <- zeb_df$Row
+  zeb_df$Row <- NULL
+  
+  return(zeb_df)
+}
+```
+
+(2) Make Individual Seurat Objects. 
+
+```{r include=TRUE}
+make_ciona_seurat <- function(ciona_df, min_cells, min_features, n_features){
+  ciona_seurat <- CreateSeuratObject(counts = ciona_df,
+                                     min.cells = min_cells, 
+                                     min.features = min_features)
+  
+  ciona_seurat <- NormalizeData(object = ciona_seurat)
+  
+  ciona_seurat <- FindVariableFeatures(ciona_seurat, 
+                                       selection.method = "vst",
+                                       nfeatures = n_features)
+  return(ciona_seurat)
+}
+```
+
+############################################################################
+

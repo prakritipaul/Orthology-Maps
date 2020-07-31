@@ -1,0 +1,49 @@
+README
+get_all_orthologs directory (Git)
+This directory has all code for Cocktail Project, in which I use orthologous genes to infer orthologous cell types. Thus, the "all" not just "1-1" orthologs part.
+
+NOTE: CLEAN UP CODE.
+
+# 
+
+(1) ciona/zeb_get_all_orthologs.py
+-Uses Ensembl REST API to extract one2one, one2many, and many2many orthologs for ENSCs. 
+
+-Makes ensC2ensZ_dict
+-Makes ensZ2ensC_dict
+
+#
+
+(2) ciona_zeb_CT_helper.Rmd 
+1) Calculates top50 DEGs for Ciona Tissues. Present in ciona_marker_df_list.
+
+2) Uses top50 DEGs calculated for Zeb Tissues from "zeb_degs_heatmaps.Rmd".
+#    Present in zeb_marker_df_list.
+
+3) Creates .csv files that have "num_DEG" (10) DEGs for each CT. 
+#    for munging in "make_cocktail_dicts.py" -> creates ciona/zeb_cocktail_dicts.
+
+#
+
+(3) make_cocktail_dicts.py
+- {CT: [cocktail_gene_1... cocktail_gene_n]...}
+
+Ciona: {"endo": [KHID_1... KHID_n]...}
+	 
+Zeb:	 {'diff_neus': ['elavl3',
+               'nhlh2',
+               'onecut1',
+               'dlb',
+               'otpa',
+               'LOC100536821',
+               'LOC797032',
+               'cplx2l',
+               'mllt11',
+               'ebf2']...
+
+#
+               
+(4) make_converted_ortho_dicts.py
+ciona_converted_ortho_dict = 
+{'KH2012:KH.C4.409', [('ortholog_one2one', 'chac1')]
+

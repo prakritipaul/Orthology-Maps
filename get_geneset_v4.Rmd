@@ -1,0 +1,293 @@
+---
+title: "validate_get_geneset_v4"
+output: html_document
+---
+
+# Follows from/Works in parallel with "get_geneset_v4.Rmd"/"get_geneset_troubleshooting.Rmd"
+
+# Note: It was initially created to validate its pipeline against 25 genes.
+#       Discovered that the resultant heatmap was really great.
+#       Implemented 7/23/20.
+
+# General Description and Notes below:
+
+# Specify gene lists (zeb_genes, khid_list) and
+# CT lists (ciona_cell_type_list, zeb_cell_type_list_v4)
+# to get data matrices.
+
+# CAUTION!
+# (1) ciona_cell_type_list consists of cells from clusters in larva stage.
+# (2) zeb_cell_type_list consists of cells from clusters in zeb 24hpf.
+# (3) zeb_cell_type_list_v4 is something you specify! It is a subset of zeb_cell_type_list.
+#     It currently consists of the same 16 CTs used in "get_geneset_troubleshooting.Rmd".
+
+# Gene Lists:
+# (1) Unique unfiltered 1-1 orthologs (2592)
+# one2one_ciona_khids, one2one_zeb_genes
+
+# (2) 25 genes (from "get_geneset_troubleshooting.Rmd)
+# final_khids, final_zeb_genes
+
+# Note:
+# Zeb 16 CTs: (1st heatmaps using v4: 25, 2592)
+# noto, heart_52, heart_51_56, muscles, epi_1, epi_2, panc_prim_endo, meso, pec_fin_bud, ph_arch_ndnf, iono, leuko, lens, optic_cup, diff_neus, nc_grem2
+
+# Zeb 12 CTs: (To make pairwise DEGs)
+# pec_fin_bud, panc_prim, noto, muscles, meso, leuko, diff_neus, epi_1, _2, heart_51_56, _52, tail_spinal_cord 
+
+# TO DO:: Segways into: 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+```
+
+# Gene List
+```{r include=TRUE}
+one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
+
+one_one_df <- read.table(one_one_dir,
+                         sep = ",",
+                         header = FALSE,
+                         stringsAsFactors = FALSE)
+
+one2one_khid_list = one_one_df$V1
+one2one_zeb_genes = one_one_df$V2
+```
+
+"""
+Helper Function to make Gene Specificity Matrix (Tosches)
+"""
+```{r include=TRUE}
+make_gene_specificity_matrix <- function(average_expression_matrix) {
+  # Given an average expression matrix, convert to a gene specificity matrix (Tosches)
+  # Args:
+  #   average_expression_matrix: 
+  #       e.g. ciona_average_expression_matrix <- cbind(ciona_df_1, ciona_df_2)
+  #
+  # Routine:
+  #     g_c/(1/N)sum(i in C)g_i
+  #
+  # Returns:
+  #   gsm: Output of above routine.
+  gsm_1 <- average_expression_matrix
+  # makes new column with  mean of the row (average expression of gene across all cell types)
+  gsm_1 <- gsm_1 %>% mutate(gene_CTs_avexp = rowMeans(.))
+  num_cell_types <- ncol(gsm_1)-1
+  gsm <- gsm_1[, 1:num_cell_types]/gsm_1[, num_cell_types+1]
+  
+  return(gsm)
+}
+```
+
+```{r include=TRUE}
+'%notin%' <- Negate('%in%')
+```
+
+"""""""""""""""""""""""""""""""
+Workflow
+These are already 1-1 orthologs.
+
+final_khids/final_zeb_genes (25)
+one2one2_khid_list/one2one2_zeb_genes (2592)
+
+"""""""""""""""""""""""""""""""
+
+# Input gene lists. 
+```{r include=TRUE}
+khid_list <- final_khids
+zeb_genes <- final_zeb_genes
+```
+
+# Get all unfiltered genes in Zeb and Ciona. 
+# These are genes that can even be considered for downstream analyses. 
+```{r include=TRUE}
+# 30677 x 34750
+zeb_data <- zeb_integrated_50[["RNA"]]@data
+# zeb_data <- GetAssayData(zeb_integrated_50, slot="data") only for VariableFeatures.
+
+zeb_rownames <- rownames(zeb_data)
+common_zeb_genes <- intersect(zeb_rownames, zeb_genes)
+
+# 14433 x 12005
+ciona_data <- clean_chen_larva_integrated_20[["RNA"]]@data
+
+ciona_rownames <- rownames(ciona_data)
+common_ciona_khids <- intersect(ciona_rownames, khid_list)
+```
+
+# Get indices of input zeb genes that are not filtered.
+# Zeb 
+```{r include=TRUE}
+# For each input gene, check that it is unflitered.
+qualified_zeb_indices <- which(zeb_genes %in% zeb_rownames)
+
+# Check if any genes showed up twice in your input gene list.
+dup_zeb_genes <- duplicated(zeb_genes)
+dup_zeb_indices <- which(dup_zeb_genes == TRUE)
+# Genes at dup_zeb_indices will have showed up multiple times in input gene list.
+validate_dup_zeb_genes <- zeb_genes[dup_zeb_indices]
+
+# These are the indices of input genes that are unfiltered.
+qualified_zeb_indices <- qualified_zeb_indices[qualified_zeb_indices %notin% dup_zeb_indices]
+```
+
+# Ciona 
+```{r include=TRUE}
+qualified_ciona_indices <- which(khid_list %in% ciona_rownames)
+
+dup_ciona_genes <- duplicated(khid_list)
+dup_ciona_indices <- which(dup_ciona_genes == TRUE)
+validate_dup_ciona_genes <- khid_list[dup_ciona_indices]
+
+qualified_ciona_indices <- qualified_ciona_indices[qualified_ciona_indices %notin% dup_ciona_indices]
+```
+
+# Which indices are in common?
+```{r include=TRUE}
+common_indices <- intersect(qualified_zeb_indices, qualified_ciona_indices)
+```
+
+# Get qualified genes.
+```{r include=TRUE}
+qualified_zeb_genes <- zeb_genes[common_indices]
+qualified_ciona_khids <- khid_list[common_indices]
+```
+
+"""
+Ciona: Make Average Expression Dataframes for Ciona CTs (7).
+ciona_avexp_df_v4 = ciona_df
+"""
+
+## Speficy ciona_cell_type_list ##
+```{r include=TRUE}
+ciona_dummy_col <- rep(0, length(qualified_ciona_khids))
+ciona_df <- data.frame(ciona_dummy=ciona_dummy_col)
+
+for (i in 1:length(ciona_cell_type_list)) {
+  cat("i = ", i, "\n")
+  ciona_cells <- ciona_cell_type_list[[i]]
+  # Get gene exp values for all cells in a CT.
+  ciona_data_pre <- ciona_data[qualified_ciona_khids, ciona_cells]
+  ciona_data_df <- as.data.frame(ciona_data_pre)
+  # Get av exp for each gene for all CTs.
+  ciona_row <- rowMeans(ciona_data_df)
+  ciona_df <- cbind(ciona_df, ciona_row)
+}
+
+# Remove ciona_dummy column.
+ciona_df <- subset(ciona_df, select=-(ciona_dummy))
+
+ciona_colnames <- names(ciona_cell_type_list)
+colnames(ciona_df) <- ciona_colnames
+
+# The Average Expression Dataframe 
+ciona_avexp_df_v4 <- ciona_df
+```
+
+"""
+Zeb: Make Average Expression Dataframes for Zeb CTs (12/16).
+zeb_avexp_df_v4 = zeb_df
+
+These are the same CTs used in Module v3 in "get_geneset_troubleshooting.Rmd"
+"""
+
+## Specify zeb_cell_type_list_v4 ##
+```{r include=TRUE}
+zeb_cell_type_list_v4 <- zeb_CT_12
+```
+                             
+```{r include=TRUE}
+zeb_dummy_col <- rep(0, length(qualified_zeb_genes))
+zeb_df <- data.frame(zeb_dummy=zeb_dummy_col)
+
+####
+
+for (i in 1:length(zeb_cell_type_list_v4)) {
+  cat("i = ", i, "\n")
+  zeb_cells <- zeb_cell_type_list_v4[[i]]
+  # Get gene exp values for all cells in a CT.
+  zeb_data_pre <- zeb_data[qualified_zeb_genes, zeb_cells]
+  zeb_data_df <- as.data.frame(zeb_data_pre)
+  # Get av exp for each gene for all CTs.
+  zeb_row <- rowMeans(zeb_data_df)
+  zeb_df <- cbind(zeb_df, zeb_row)
+}
+
+# Remove ciona_dummy column.
+zeb_df <- subset(zeb_df, select=-(zeb_dummy))
+
+zeb_colnames <- names(zeb_cell_type_list_v4)
+colnames(zeb_df) <- zeb_colnames
+
+# The Average Expression Dataframe
+zeb_avexp_df_v4 <- zeb_df
+```
+
+"""
+Make the GSM Dataframes, Cor Df 
+"""
+```{r include=FALSE}
+ciona_gsm_v4 <- make_gene_specificity_matrix(ciona_avexp_df_v4)
+zeb_gsm_v4 <- make_gene_specificity_matrix(zeb_avexp_df_v4)
+
+cor_df_v4 <- make_cor_df(ciona_gsm_v4, zeb_gsm_v4)
+```
+
+```{r include=TRUE}
+cor_df_v4 <- cor_df_v4 %>% transform(cor = as.numeric(cor))
+```
+
+# Visualize
+```{r include=TRUE}
+# "RdYlBu", "PiYG"
+cor_df_v4_heatmap <- ggplot(data = cor_df_v4,
+                         aes(x=ciona_CTs, y=zeb_CTs, fill=cor)) +
+                         geom_tile() +
+                         scale_fill_distiller(palette = "RdBu")
+              
+
+cor_df_v4_heatmap
+```
+
+### ZEB CT LISTS ###
+
+```{r include=TRUE}
+zeb_CT_16 <- list(noto = noto,
+                             heart_52 = heart_52,
+                             heart_51_56 = heart_51_56,
+                             muscles = muscles,
+                             epi_1 = epi_1,
+                             epi_2 = epi_2,
+                             panc_prim_endo = panc_prim_endo,
+                             meso = meso,
+                             pec_fin_bud = pec_fin_bud,
+                             ph_arch_ndnf = ph_arch_ndnf,
+                             iono = iono,
+                             leuko = leuko,
+                             lens = lens,
+                             optic_cup = optic_cup,
+                             diff_neus = diff_neus,
+                             nc_grem2 = nc_grem2)
+
+zeb_CT_12 <- list(noto = noto,
+                             heart_52 = heart_52,
+                             heart_51_56 = heart_51_56,
+                             muscles = muscles,
+                             epi_1 = epi_1,
+                             epi_2 = epi_2,
+                             panc_prim_endo = panc_prim_endo,
+                             meso = meso,
+                             pec_fin_bud = pec_fin_bud,
+                             leuko = leuko,
+                             diff_neus = diff_neus,
+                             tail_spinal_cord = tail_spinal_cord)
+```
+
+
+

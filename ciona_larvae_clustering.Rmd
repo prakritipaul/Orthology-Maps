@@ -47,7 +47,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r include=TRUE}
+```{r include=FALSE}
 library(Seurat)
 library(dplyr)
 library(ggplot2)

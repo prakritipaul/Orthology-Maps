@@ -8,7 +8,9 @@ output: html_document
 
 # Works in parallel with: None.
 
-# General Description: Script gets pairwise DEGs for Ciona and Zeb. First attempt to identify 1-1 Ortholog DEGs (only 6).
+# General Description: Script gets pairwise DEGs for Ciona and Zeb. 
+# First attempt to identify 1-1 Ortholog DEGs (only 6).
+# No Tosches Workflow. Only 1-1 DEG identification.
 
 # Uses env_get_pairwise_zeb_ciona_degs.RData
 
@@ -19,6 +21,8 @@ output: html_document
 # (3) Expression patterns are visualized in Ciona tissues
 #     and Zeb notochord.
 # (4) First exploratory analyses of 10/top50 Ciona notochord DEGs are performed.
+
+# Note: ZEB DEG CALCULATION TOOK 3 HOURS TO RUN!
 
 # Segways into "get_gene_set_troubleshooting.Rmd" because I only got 6 genes in common.
 

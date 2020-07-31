@@ -1,0 +1,485 @@
+---
+title: "temp_MAST"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# MAST, using Seurat's implementation.
+# (1) Tried on clean_chen_integrated_20 (2000 VarGenes) with logFC > 1.
+#     Fast, but too few genes.
+#     (DEGs -> 1-1 orthos)
+#     pairwise: 790 -> 58 (~12 mins)
+#     not pairwise: 700 -> 51 (~7 mins) 
+
+# (2) Made zeb_integrated in "temp_more_VarGenes.Rmd" with 8000 Var Genes.
+#     Can I run DEG calculations? -> Do I get enough genes? Yes and No. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+```
+
+"""
+Ortho Lists
+"""
+```{r include=TRUE}
+one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
+
+one_one_df <- read.table(one_one_dir,
+                         sep = ",",
+                         header = FALSE,
+                         stringsAsFactors = FALSE)
+
+one2one_khid_list = one_one_df$V1
+one2one_zeb_genes = one_one_df$V2
+```
+
+
+"""
+Helper Function 
+"""
+```{r include=FALSE}
+munge_markers <- function(markers){
+  # Given the output of FindMarkers, we get genes whose avg_logFC > 0.5.
+  # These genes are ordered in nondecreasing order of avg_logFC.
+  # We also check that p_val_adj < 0.05
+  #
+  # Args:
+  #   markers: Output of FindMarkers (dataframe)
+  #
+  # Returns:
+  #   munged_markers: munged dataframe of KHIDs
+  munged_markers <- markers
+  munged_markers <- munged_markers[order(-munged_markers$avg_logFC), ]
+  munged_markers <- munged_markers[munged_markers$p_val_adj < 0.05, ]
+
+  return(munged_markers)
+}
+```
+
+"""
+Pairwise Helper Function
+"""
+
+```{r include=FALSE}
+master_MAST_pipeline <- function(seurat_obj, cell_type_list, logFC_thresh, min_pct_thresh) {
+
+  deg_vec <- c()
+  names <- names(cell_type_list)
+  marker_dfs <- list()
+  
+  for (i in 1:length(cell_type_list)) {
+    for (j in 1:length(cell_type_list)) {
+      if (i != j) {
+        name_1 <- names[i]
+        name_2 <- names[j]
+        
+        cat("i = ", i, "CT = ", name_1, "j = ", j, "CT = ", name_2, "\n\n")
+        cell_type_marker_df <- FindMarkers(object = seurat_obj,
+                                       ident.1 = cell_type_list[[i]],
+                                       ident.2 = cell_type_list[[j]],
+                                       test.use = "MAST",
+                                       min.pct = min_pct_thresh)
+        
+        munged_cell_type_marker_df <- munge_markers(cell_type_marker_df)
+        munged_cell_type_marker_df_2 <- munged_cell_type_marker_df %>% filter(avg_logFC > logFC_thresh)
+        
+        # Save the DEG df.
+        pair_name <- paste0(name_1, "_", name_2)
+        marker_dfs[[pair_name]] <- munged_cell_type_marker_df_2
+        
+        # Save the DEG names.
+        munged_cell_type_markers <- rownames(munged_cell_type_marker_df_2)
+        deg_vec <- c(deg_vec, munged_cell_type_markers)
+      }
+    }
+  }
+  
+  unique_deg_vec <- unique(deg_vec)
+  ans_list = list(marker_dfs = marker_dfs,
+                  unique_deg_vec = unique_deg_vec)
+  
+  return(ans_list)
+}
+```
+
+
+"""
+Not Pairwise Helper Function
+"""
+```{r include=FALSE}
+master_MAST_pipeline_2 <- function(seurat_obj, cell_type_list, logFC_thresh, min_pct_thresh) {
+
+  deg_vec <- c()
+  names <- names(cell_type_list)
+  marker_dfs <- list()
+  
+  for (i in 1:length(cell_type_list)) {
+        name_1 <- names[i]
+        
+        cat("i = ", i, "CT = ", name_1, "\n\n")
+        cell_type_marker_df <- FindMarkers(object = seurat_obj,
+                                       ident.1 = cell_type_list[[i]],
+                                       test.use = "MAST",
+                                       min.pct = min_pct_thresh)
+        
+        munged_cell_type_marker_df <- munge_markers(cell_type_marker_df)
+        munged_cell_type_marker_df_2 <- munged_cell_type_marker_df %>% filter(avg_logFC > logFC_thresh)
+        
+        # Save the DEG df.
+        marker_dfs[[name_1]] <- munged_cell_type_marker_df_2
+        
+        # Save the DEG names.
+        munged_cell_type_markers <- rownames(munged_cell_type_marker_df_2)
+        deg_vec <- c(deg_vec, munged_cell_type_markers)
+      }
+  unique_deg_vec <- unique(deg_vec)
+  ans_list = list(marker_dfs = marker_dfs,
+                  unique_deg_vec = unique_deg_vec)
+  
+  return(ans_list)
+}
+```
+
+"""
+Let's get all pairwise-cluster DEGs in Zebrafish
+
+zeb_integrated (8000 VarGenes) 7/28/20
+"""
+
+# Pairwise CHANGE TO ZEB 
+```{r include=FALSE}
+# 124 
+zeb_MAST_ans <- master_MAST_pipeline(zeb_integrated,
+                                 zeb_cell_type_list,
+                                 logFC_thresh = 1, 
+                                 min_pct_thresh = 0.2)
+```
+
+
+
+
+
+<!-- ### COMPLETE COMPLETE COMPLETE ### -->
+
+<!-- """ -->
+<!-- Test on Ciona  -->
+<!-- """ -->
+<!-- # Test  -->
+<!-- ```{r include=TRUE} -->
+<!-- test_ciona_cell_type_list <- list(mus = ciona_larva_mus, -->
+<!--                                   noto = ciona_larva_noto) -->
+<!-- ``` -->
+
+<!-- ```{r include=FALSE} -->
+<!-- test_ans <- master_MAST_pipeline(clean_chen_larva_integrated_20, -->
+<!--                                  test_ciona_cell_type_list, -->
+<!--                                  logFC_thresh = 1,  -->
+<!--                                  min_pct_thresh = 0.2) -->
+<!-- ``` -->
+
+<!-- # Real thing. -->
+<!-- ```{r include=TRUE} -->
+<!-- ciona_cell_type_list <- list(endo = ciona_larva_endo, -->
+<!--                              epi = ciona_larva_epi, -->
+<!--                              mes = ciona_larva_mes, -->
+<!--                              mus = ciona_larva_mus, -->
+<!--                              heart = ciona_larva_heart, -->
+<!--                              cns = ciona_larva_cns, -->
+<!--                              noto = ciona_larva_noto) -->
+<!-- ``` -->
+
+<!-- # Pairwise  -->
+<!-- ```{r include=FALSE} -->
+<!-- # 12 min -->
+<!-- ciona_MAST_ans <- master_MAST_pipeline(clean_chen_larva_integrated_20, -->
+<!--                                  ciona_cell_type_list, -->
+<!--                                  logFC_thresh = 1,  -->
+<!--                                  min_pct_thresh = 0.2) -->
+<!-- ``` -->
+
+<!-- # Not pairwise  -->
+<!-- ```{r include=FALSE} -->
+<!-- # 5 min -->
+<!-- ciona_MAST_ans_2 <- master_MAST_pipeline_2(clean_chen_larva_integrated_20, -->
+<!--                                  ciona_cell_type_list, -->
+<!--                                  logFC_thresh = 1,  -->
+<!--                                  min_pct_thresh = 0.2) -->
+<!-- ``` -->
+
+<!-- # How many unique DEGs are 1-1 orthologs? -->
+<!-- ```{r include=TRUE} -->
+<!-- # 790 -->
+<!-- ciona_unique_degs <- ciona_MAST_ans$unique_deg_vec -->
+
+<!-- # 58  -->
+<!-- ciona_one2one_indices <- which(one2one_khid_list %in% ciona_unique_degs) -->
+<!-- ``` -->
+
+<!-- # How many unique DEGs are 1-1 orthologs? -->
+<!-- ```{r include=TRUE} -->
+<!-- # 700 -->
+<!-- ciona_unique_degs_2 <- ciona_MAST_ans_2$unique_deg_vec -->
+
+<!-- # 51 -->
+<!-- ciona_one2one_indices_2 <- which(one2one_khid_list %in% ciona_unique_degs_2) -->
+<!-- ``` -->
+
+
+
+
+
+
+
+<!-- ##### DUMPS ###### -->
+<!-- <!-- Export these DEGs --> -->
+<!-- <!-- """ --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- write.csv(x = unique_zeb_deg_vec, --> -->
+<!-- <!--           file = "unique_zeb_deg_vec.csv", --> -->
+<!-- <!--           row.names = FALSE) --> -->
+
+<!-- <!-- write.csv(x = unique_ciona_deg_vec, --> -->
+<!-- <!--           file = "unique_ciona_deg_vec.csv", --> -->
+<!-- <!--           row.names = FALSE) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- """ --> -->
+<!-- <!-- What do the profiles of the 30 1-1 DEGs look like? --> -->
+<!-- <!-- """ --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- ciona_ortho_KHID_vec <- c('KH2012:KH.C3.724', 'KH2012:KH.L107.7', 'KH2012:KH.C5.302', 'KH2012:KH.C1.1067', 'KH2012:KH.C7.633', 'KH2012:KH.C11.2') --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_endo, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_epi, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_mes, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_mus, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_heart, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_cns, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+
+<!-- <!-- """ --> -->
+<!-- <!-- Notochords? --> -->
+<!-- <!-- """ --> -->
+
+<!-- <!-- # Ciona --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = clean_chen_larva_integrated_20, --> -->
+<!-- <!--           features = ciona_ortho_KHID_vec, --> -->
+<!-- <!--           cells = ciona_larva_noto, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- zeb_ortho_gene_vec <- c('tgfb3', 'lhx5', 'blvrb', 'hpca', 'col1a2', 'crip1') --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- # Zeb --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- DoHeatmap(object = zeb_integrated_50, --> -->
+<!-- <!--           features = zeb_ortho_gene_vec, --> -->
+<!-- <!--           cells = noto, --> -->
+<!-- <!--           slot = "data", --> -->
+<!-- <!--           size = 2) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- """ --> -->
+<!-- <!-- Comparative Mona Analysis of Noto Top50 DEGs --> -->
+<!-- <!-- """ --> -->
+
+<!-- <!-- """ --> -->
+<!-- <!-- Ciona --> -->
+<!-- <!-- """ --> -->
+<!-- <!-- # (Ciona) Get top50 DEGs  --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- ciona_noto_top50_markers <- get_top_n_df(ciona_larva_noto, clean_chen_larva_integrated_20, "MAST", 50) --> -->
+
+<!-- <!-- write.csv(rownames(ciona_noto_top50_markers), "ciona_noto_top50_markers.csv", row.names = FALSE) --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- # (Ciona) List of 1-1 orthologs --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- ciona_ortho_KHID_vec <- c("KH2012:KH.C3.724", "KH2012:KH.L107.7", "KH2012:KH.C5.302", "KH2012:KH.C1.1067", "KH2012:KH.C7.633", "KH2012:KH.C11.2") --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- """ --> -->
+<!-- <!-- Exploratory Questions --> -->
+<!-- <!-- """ --> -->
+
+<!-- <!-- # (Ciona) Are any of these in top50 DEGs for Ciona Noto? --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- # Yes!! --> -->
+
+<!-- <!-- if (any(ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers))) { --> -->
+<!-- <!--   print(ciona_ortho_KHID_vec[ciona_ortho_KHID_vec %in% rownames(ciona_noto_top50_markers)]) --> -->
+<!-- <!-- }  --> -->
+<!-- <!-- # KH2012:KH.C3.724, COL1A1/2 --> -->
+
+<!-- <!-- # KH2012:KH.C7.633, COL1A1/2 --> -->
+<!-- <!-- ``` --> -->
+
+<!-- <!-- # (Ciona) What are the first 10 markers? --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- # From code, from Christelle Best Human Hits --> -->
+
+<!-- <!-- ciona_noto_top10_markers <- rownames(ciona_noto_top50_markers)[1:10] --> -->
+<!-- <!-- # KH2012:KH.S423.2, FIBCD1, TNR, TNXB --> -->
+<!-- <!-- ciona_noto_top10_markers[1] --> -->
+<!-- <!-- # noto8! KH2012:KH.C11.737, CALM1, CALM3, CALML3 --> -->
+<!-- <!-- ciona_noto_top10_markers[2] --> -->
+<!-- <!-- # KH2012:KH.C13.35, CNMD, TNMD --> -->
+<!-- <!-- ciona_noto_top10_markers[3] --> -->
+<!-- <!-- # KH2012:KH.C8.749, None  --> -->
+<!-- <!-- ciona_noto_top10_markers[4] --> -->
+<!-- <!-- # KH2012:KH.C10.8, FAT4, PROS1, SVEP1 --> -->
+<!-- <!-- ciona_noto_top10_markers[5] --> -->
+<!-- <!-- # KH2012:KH.C9.174, None  --> -->
+<!-- <!-- ciona_noto_top10_markers[6] --> -->
+<!-- <!-- # KH2012:KH.C9.698, GPX4/7/8 --> -->
+<!-- <!-- ciona_noto_top10_markers[7] --> -->
+<!-- <!-- # KH2012:KH.L18.30, PID1 --> -->
+<!-- <!-- ciona_noto_top10_markers[8] --> -->
+<!-- <!-- # KH2012:KH.C8.470, TFPI, TFPI2, WFIKKN2  --> -->
+<!-- <!-- ciona_noto_top10_markers[9] --> -->
+<!-- <!-- # KH2012:KH.C11.328, SERPINB10, SERPINB9, SERPINC1 --> -->
+<!-- <!-- ciona_noto_top10_markers[10] --> -->
+
+<!-- <!-- ``` --> -->
+
+<!-- <!-- # What are the orthologs of these genes? --> -->
+<!-- <!-- ```{r include=TRUE} --> -->
+<!-- <!-- # zeb/human ortholog (from Ensembl) --> -->
+
+<!-- <!-- # (1) ERROR KH2012:KH.S423.2 -> ENSCING00000017001 -> None/None  --> -->
+<!-- <!-- # *There should be a human ortholog in Ensembl --> -->
+<!-- <!-- # *Correct that ENSC is in unmapped_list --> -->
+
+<!-- <!-- # (2) ERROR KH.C11.737 -> ENSCING00000019441 -> None/None --> -->
+<!-- <!-- # *There should be a human ortholog in Ensembl --> -->
+<!-- <!-- # *Correct that ENSC is in unmapped_list --> -->
+
+<!-- <!-- # (3) CORRECT KH.C13.35 -> ENSCING00000016942 --> -->
+<!-- <!-- # -> tnmd  (ENSDARG00000052615) --> -->
+<!-- <!-- # -> cnmd  (ENSDARG00000100133)/ --> -->
+<!-- <!-- # --> TNMD  (ENSG00000000005) --> -->
+<!-- <!-- # --> CNMD  (ENSG00000136110) --> -->
+<!-- <!-- # *Correct that ENSC is in many_list --> -->
+
+<!-- <!-- # (4) Skipped --> -->
+
+<!-- <!-- # (5) KH.C10.8 -> ENSCING00000005858 (FAT4, PROS1, SVEP1) --> -->
+<!-- <!-- # -> ndufs2  (ENSDARG00000007526) --> -->
+<!-- <!-- # --> NDUFS2  (ENSG00000158864) --> -->
+<!-- <!-- # *This is a 1-1 ortholog --> -->
+<!-- <!-- # *Correct that ENSC is in correct_list --> -->
+<!-- <!-- # *KH.C10.8 in unique_ciona_deg_vec, but ndufs2 is not in unique_zeb_deg_vec --> -->
+
+<!-- <!-- # (7) KH.C9.698 -> ENSCING00000012924 (GPX4/7/8) --> -->
+<!-- <!-- # many-to-many Zeb   --> -->
+<!-- <!-- # (ENSDARG00000003077) -> ENSCING00000001683, ENSCING00000012924 --> -->
+
+
+<!-- <!-- ``` --> -->
+
+<!-- # ```{r include=FALSE} -->
+<!-- # function(markers){ -->
+<!-- #   # Given the output of FindMarkers, we get genes whose avg_logFC > 0.5. -->
+<!-- #   # These genes are ordered in nondecreasing order of avg_logFC. -->
+<!-- #   # We also check that p_val_adj < 0.05 -->
+<!-- #   # -->
+<!-- #   # Args: -->
+<!-- #   #   markers: Output of FindMarkers (dataframe) -->
+<!-- #   # -->
+<!-- #   # Returns: -->
+<!-- #   #   munged_markers: munged dataframe of KHIDs -->
+<!-- #   munged_markers <- markers -->
+<!-- #   munged_markers <- munged_markers[order(-munged_markers$avg_logFC), ] -->
+<!-- #   munged_markers <- munged_markers[munged_markers$p_val_adj < 0.05, ] -->
+<!-- # -->
+<!-- #   return(munged_markers) -->
+<!-- # } -->
+<!-- # ``` -->
+
+<!-- # WARNING 3H!!! # -->
+<!-- ```{r include=TRUE} -->
+<!-- # 3 h -->
+<!-- # 1372 -->
+<!-- zeb_deg_vec <- c() -->
+
+<!-- for (i in 1:length(zeb_cell_type_list)) { -->
+<!--   for (j in 1:length(zeb_cell_type_list)) { -->
+<!--     if (i != j) { -->
+<!--       cat("i = ", i, "j = ", j, "\n\n") -->
+<!--       cell_type_marker_df <- FindMarkers(object = zeb_integrated_50, -->
+<!--                                      ident.1 = zeb_cell_type_list[[i]], -->
+<!--                                      ident.2 = zeb_cell_type_list[[j]], -->
+<!--                                      test.use = "MAST") -->
+
+<!--       munged_cell_type_marker_df <- munge_markers(cell_type_marker_df)[1:50, ] -->
+<!--       munged_cell_type_markers <- rownames(munged_cell_type_marker_df) -->
+
+<!--       zeb_deg_vec <- c(zeb_deg_vec, munged_cell_type_markers) -->
+<!--     } -->
+<!--   } -->
+<!-- } -->
+
+<!-- unique_zeb_deg_vec <- unique(zeb_deg_vec) -->
+<!-- ``` -->
+
+

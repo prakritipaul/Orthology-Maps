@@ -48,12 +48,33 @@ This script reads in raw data from Schier, Klein, and 4D and creates dataframes 
 """
 Part 2: Attempts to create gene sets.
 
-"""
-(3) get_pairwise_zeb_ciona_degs.Rmd
-(1) Module v1: Tosches Method
--Makes unique_ciona_deg_vec (444) and unique_zeb_deg_vec (1372)
-NOTE: ZEB DEG CALCULATION TOOK 3 HOURS TO RUN!
+Note: Outputs of modules are present in "gene_geneset_attempts" directory.
 
+"""
+(3) "get_pairwise_zeb_ciona_degs.Rmd"
+Module v1: Get pairwise DEGs for Ciona and Zeb.
+("MAST" in FindMarkers) 
+ 
+-Also used as a first attempt to identify 1-1 Ortholog DEGs.
+-No Tosches workflow. 
+-Only 6 identified. 
+-Thus segways into "gene_geneset_troubleshooting.Rmd"
+
+(4) "gene_geneset_troubleshooting.Rmd"
+This Script contains entire Tosches workflow = Gene Specificity Matrix, Spearman Correlations.
+
+(1) Module v2 (Unused): Incorrect Implementation of Module v3.
+(2) Module v3: Use all expressed 1-1 Orthologs using 2000 VarFeatures (as the upper bound)
+-Note: Tosches worflow is run on 25 1-1 orthologs, NOT 1-1 DEGs!
+
+
+
+
+
+
+"""
+Past Contents
+"""
 (4) (munging code directory) 
 -unique_ciona_deg_vec (444) and unique_zeb_deg_vec (1372) are manipulated in "get_one_to_one_gene_lists.py" to make ciona_ortho_KHID_vec and zeb_ortho_gene_vec (which are then used for visualization in get_pairwise_zeb_ciona_degs.Rmd)
 	

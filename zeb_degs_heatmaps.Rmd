@@ -146,6 +146,8 @@ cell_type_list_1 = list(noto, heart_52, heart_51_56, muscles, panc_prim_endo, ph
 
 cell_type_flags_1 = c("noto", "heart_52", "heart_51_56", "muscles", "panc_prim_endo", "ph_arch_cd248b", "ph_arch_ndnf", "epi_1", "epi_2", "endothelials", "tail_spinal_cord", "tail_PSM")
 
+names(cell_type_list_1) <- cell_type_flags_1
+
 marker_df_list_1 <- list()
 
 for (i in 1:length(cell_type_list_1)) {
@@ -156,6 +158,27 @@ for (i in 1:length(cell_type_list_1)) {
   marker_df_list_1[[cell_type_flags_1[i]]] <- marker_df_1
 }
 ```
+
+# Test to get list names 
+```{r include=TRUE}
+test_cell_type_list_1 = list(noto, heart_52, heart_51_56)
+test_cell_type_flags_1 = c("noto", "heart_52", "heart_51_56")
+
+test_marker_df_list_1 <- list()
+
+for (i in 1:length(test_cell_type_list_1)) {
+  CT_cells <- test_cell_type_list_1[[i]]
+  CT_name <- test_cell_type_flags_1[[i]]
+  cat("Now doing ", i, "=", CT_name, "\n\n")
+  
+  test_marker_df_1 <- get_top_n_df(CT_cells, zeb_integrated_50, "MAST", 10)
+  
+  test_marker_df_list_1[[CT_name]] <- test_marker_df_1
+}
+
+test_marker_df_list_1
+```
+
 # (3) Make top50 vector and get all cells (1)
 ```{r include=TRUE}
 # Expect sketchy: Epi's, ph's
@@ -346,6 +369,8 @@ cell_type_list_2 = list(diff_neu_hmx1_dlx, diff_neu_phox2a, diff_neus, diff_neu_
 
 cell_type_flags_2 = c("diff_neu_hmx1_dlx", "diff_neu_phox2a", "diff_neus", "diff_neu_eomesa", "diff_neu_sst1_1", "diff_neu_rohon_beard", "nc_nc_mcamb_irid", "nc_xanth_mel", "nc_grem2")
 
+names(cell_type_list_2) <- cell_type_flags_2
+
 marker_df_list_2 <- list()
 
 for (i in 1:length(cell_type_list_2)) {
@@ -532,6 +557,8 @@ cell_type_list_3 = list(neur_vent_hind, neur_mid, neur_dors_spinal_cord, neur_di
 
 cell_type_flags_3 = c("neur_vent_hind", "neur_mid", "neur_dors_spinal_cord", "neur_dien", "neur_dors_hind", "neur_hind_roof", "neur_telen", "neur_mid_vent_nkx6_2", "neur_hind_gsx1", "neur_post_vent_nkx6_2")
 
+names(cell_type_list_3) <- cell_type_flags_3
+
 marker_df_list_3 <- list()
 
 for (i in 1:length(cell_type_list_3)) {
@@ -595,6 +622,8 @@ pec_fin_bud <- WhichCells(zeb_integrated_50, idents = 38) # 65
 cell_type_list_4 = list(lens, optic_cup, rpe, otic_plac, iono, leuko, eryth, macro, meso, peri, latline, pec_fin_bud)
 
 cell_type_flags_4 = c("lens", "optic_cup", "rpe", "otic_plac", "iono", "leuko", "eryth", "macro", "meso", "peri", "latline", "pec_fin_bud")
+
+names(cell_type_list_4) <- cell_type_flags_4
 
 marker_df_list_4 <- list()
 

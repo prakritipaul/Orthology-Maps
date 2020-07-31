@@ -10,16 +10,22 @@ output: html_document
 # General Description: Script implements various methods to get gene set
 # to be used for downstream cross-species cell type comparisons. 
 
+# VVIMP: This Script contains entire Tosches workflow = 
+# Gene Specificity Matrix, Spearman Correlations. 
+# However, Tosches worflow is run on 25 1-1 orthologs, NOT 1-1 DEGs!
+
 # Uses env_get_pairwise_zeb_ciona_degs.RData
 
 # Module v2: Wrong Implementation. Used "get_geneset_v2.py" (at end of Script)
 # Important Observations: (at end of Script)
-#   (1) Only Var Genes are used for DEG calculations and can be visualized. 
+#   (1) Only Var Genes are used for DEG calculations can be visualized. 
 #   (2) zeb_integrated_50 and clean_chen_larva_integrated_20 have 2000.
 
 # Module v3 implemented 7/2/20 using 25 genes.
+# We do not need to use 2000 as the upper bound -> 
+# get gene expression values of all 1-1 orthologs.  
 
-# TO DO Segways into 
+# Segways into: "get_geneset_v4.Rmd" 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -38,7 +44,7 @@ Module v3: Use all expressed 1-1 Orthologs using 2000 VarFeatures (as the upper 
 """
 Get KHIDs and Zeb Genes 
 """
-
+## Vary ##
 ```{r include=TRUE}
 # Older Implemenation
 
@@ -58,7 +64,9 @@ zeb_genes_df <- read.table(zeb_genes_dir,
 
 khid_list = khid_list_df$V1
 zeb_genes = zeb_genes_df$V1
+```
 
+```{r include=TRUE}
 # Implementation Used
 
 one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
@@ -76,7 +84,7 @@ zeb_genes = one_one_df$V2
 """
 Which of these are expressed in Ciona and Zeb?
 """
-
+## Can Vary Seurat Object ##
 ```{r include=TRUE}
 # 141
 ciona_vars <- VariableFeatures(clean_chen_larva_integrated_20)
@@ -354,7 +362,9 @@ Module v3 Completed 7/2/20
 """
 Common Ciona Variables
 """
-```{r include=TRUE}
+
+## Vary profile, Seurat Object ##
+```{r include=FALSE}
 ciona_txnptomic_profile <- final_khids
 
 # All tissues except for heart + muscle
@@ -372,6 +382,8 @@ ciona_av_exp_matrix_2 <- make_av_exp_matrix(ciona_seurat_2, ciona_txnptomic_prof
 All Tissues
 (ciona_cluster_num_list_1, ciona_CT_vec_list1)
 """
+
+## This will vary depending on the Seurat Object used ##
 ```{r include=TRUE}
 # 3274
 ciona_endo_cluster_nums <- c(12, 2, 20, 3, 0)
@@ -443,6 +455,7 @@ rownames(ciona_gsm) <- rownames(ciona_average_expression_matrix)
 """
 Common Zeb Variables
 """
+## Vary profile ##
 ```{r include=TRUE}
 zeb_txnptomic_profile <- final_zeb_genes
 
@@ -455,6 +468,7 @@ zeb_av_exp_matrix <- make_av_exp_matrix(zeb_seurat, zeb_txnptomic_profile)
 Select Zeb Tissues
 (zeb_cluster_num_list, zeb_CT_vec_list)
 """
+## Can Vary Cell Types ##
 ```{r include=TRUE}
 # Sanity Checks (4)
 zeb_noto_cluster_nums <- 7
@@ -570,7 +584,8 @@ cz_cor_df <- cz_cor_df %>% transform(cor = as.numeric(cor))
 ```{r include=TRUE}
 # "RdYlBu", "PiYG"
 cz_cor_heatmap <- ggplot(data = cz_cor_df,
-                         aes(x=ciona_CTs, y=zeb_CTs, fill=cor)) + 
+                         aes(x=ciona_CTs, y=zeb_CTs, fill=cor)) +
+                         geom_tile() +
                          scale_fill_distiller(palette = "RdBu")
 
 cz_cor_heatmap

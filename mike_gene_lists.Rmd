@@ -1,0 +1,176 @@
+---
+title: "mike_gene_lists"
+output: html_document
+---
+
+# General Script to generate lists of interest.
+# 7/30/20: 
+# 1-1 DEGs in common and not between Zeb heart_51_56 and Ciona endo, heart, (and mes). 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+```
+
+# Import KHID -> Human Ortholog File
+```{r include=TRUE}
+khid_human_ortho_dir <- "/home/pprakriti/Desktop/orthology_maps_temps/ANISEED-Cirobu-GeneName-3bestBlastHitHuman.rnames"
+khid_human_ortho_df <- read.table(khid_human_ortho_dir,
+                                  sep = "\t",
+                                  stringsAsFactors = FALSE,
+                                  header = TRUE)
+```
+
+# Get all DEGs (logFC > 1) for Zeb heart_51_56.
+```{r include=TRUE}
+mike_zeb_heart_degs <- c(rownames(zeb_ans_list$edgeR_res_list$heart_51_56_noto),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_muscles),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_pec_fin_bud),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_panc_prim_endo),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_meso),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_leuko),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_diff_neus),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_epi_1),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_epi_2),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_heart_52),
+                         rownames(zeb_ans_list$edgeR_res_list$heart_51_56_tail_spinal_cord))
+
+# 1871 
+mike_zeb_heart_degs <- unique(mike_zeb_heart_degs)
+
+# 313
+mike_zeb_heart_one2one_indices <- which(one2one_zeb_genes %in% mike_zeb_heart_degs)
+```
+
+# Ciona Endo, Heart, Meso DEGs.
+```{r include=TRUE}
+mike_ciona_endo_degs <- c(rownames(ciona_ans_list$edgeR_res_list$endo_cns),
+                          rownames(ciona_ans_list$edgeR_res_list$endo_noto),
+                          rownames(ciona_ans_list$edgeR_res_list$endo_heart),
+                          rownames(ciona_ans_list$edgeR_res_list$endo_mus),
+                          rownames(ciona_ans_list$edgeR_res_list$endo_mes),
+                          rownames(ciona_ans_list$edgeR_res_list$endo_epi))
+
+mike_ciona_heart_degs <- c(rownames(ciona_ans_list$edgeR_res_list$heart_noto),
+                           rownames(ciona_ans_list$edgeR_res_list$heart_mus),
+                           rownames(ciona_ans_list$edgeR_res_list$heart_mes),
+                           rownames(ciona_ans_list$edgeR_res_list$heart_epi),
+                           rownames(ciona_ans_list$edgeR_res_list$heart_endo),
+                           rownames(ciona_ans_list$edgeR_res_list$heart_cns))
+
+mike_ciona_mes_degs <- c(rownames(ciona_ans_list$edgeR_res_list$mes_noto),
+                         rownames(ciona_ans_list$edgeR_res_list$mes_heart),
+                         rownames(ciona_ans_list$edgeR_res_list$mes_mus),
+                         rownames(ciona_ans_list$edgeR_res_list$mes_epi),
+                         rownames(ciona_ans_list$edgeR_res_list$mes_endo),
+                         rownames(ciona_ans_list$edgeR_res_list$mes_cns))
+
+# 3287 -> 1171 
+mike_ciona_endo_degs <- unique(mike_ciona_endo_degs)
+mike_ciona_endo_one2one_indices <- which(one2one_khid_list %in% mike_ciona_endo_degs)
+# 2379 -> 926 
+mike_ciona_heart_degs <- unique(mike_ciona_heart_degs)
+mike_ciona_heart_one2one_indices <- which(one2one_khid_list %in% mike_ciona_heart_degs)
+# 1504 -> 534
+mike_ciona_mes_degs <- unique(mike_ciona_mes_degs)
+mike_ciona_mes_one2one_indices <- which(one2one_khid_list %in% mike_ciona_mes_degs)
+```
+
+# What pairwise indices are in common?
+```{r include=TRUE}
+# 202
+cz_endo_heart <- intersect(mike_ciona_endo_one2one_indices, mike_zeb_heart_one2one_indices)
+# 168
+cz_heart_heart <- intersect(mike_ciona_heart_one2one_indices, mike_zeb_heart_one2one_indices)
+# 97
+cz_mes_heart <- intersect(mike_ciona_mes_one2one_indices, mike_zeb_heart_one2one_indices)
+```
+
+# What indices are shared among Ciona Endo and Heart?
+```{r include=TRUE}
+# 164 (Heart and Endo share a lot of 1-1 orthologs with Zeb Heart). # 93 in common among all.
+mike_common_indices <- intersect(cz_endo_heart, cz_heart_heart)
+mike_only_endo <- setdiff(cz_endo_heart, cz_heart_heart)
+mike_only_heart <- setdiff(cz_heart_heart, cz_endo_heart)
+```
+
+# Gene Lists.
+```{r include=TRUE}
+endo_khids <- one2one_khid_list[mike_only_endo]
+endo_human_df <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% endo_khids, ]
+endo_human_df
+
+heart_khids <- one2one_khid_list[mike_only_heart]
+heart_human_df <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% heart_khids, ]
+heart_human_df
+
+common_khids <- one2one_khid_list[mike_common_indices]
+common_human_df <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% common_khids, ]
+common_human_df
+```
+# csv files
+```{r include=TRUE}
+write.table(x = common_human_df, 
+            file = "common_orthologs.csv", 
+            sep = "\t",
+            row.names = FALSE)
+```
+
+```{r include=TRUE}
+write.table(x = endo_human_df,
+            file = "ciona_endo_orthologs.tsv",
+            sep = "\t",
+            row.names = FALSE)
+
+write.table(x = heart_human_df,
+            file = "ciona_heart_orthologs.tsv",
+            sep = "\t",
+            row.names = FALSE)
+
+```
+"""
+Negatively Correlated Tissues
+"""
+# What about negative correlating Ciona tissues? How many orthologs do they share with Zeb Heart? 
+```{r include=TRUE}
+mike_ciona_cns_degs <- c(rownames(ciona_ans_list$edgeR_res_list$cns_noto),
+                         rownames(ciona_ans_list$edgeR_res_list$cns_heart),
+                         rownames(ciona_ans_list$edgeR_res_list$cns_mus),
+                         rownames(ciona_ans_list$edgeR_res_list$cns_mes),
+                         rownames(ciona_ans_list$edgeR_res_list$cns_epi),
+                         rownames(ciona_ans_list$edgeR_res_list$cns_endo))
+
+mike_ciona_mus_degs <- c(rownames(ciona_ans_list$edgeR_res_list$mus_noto),
+                         rownames(ciona_ans_list$edgeR_res_list$mus_heart),
+                         rownames(ciona_ans_list$edgeR_res_list$mus_mes),
+                         rownames(ciona_ans_list$edgeR_res_list$mus_epi),
+                         rownames(ciona_ans_list$edgeR_res_list$mus_endo),
+                         rownames(ciona_ans_list$edgeR_res_list$mus_cns))
+
+mike_ciona_noto_degs <- c(rownames(ciona_ans_list$edgeR_res_list$noto_heart),
+                          rownames(ciona_ans_list$edgeR_res_list$noto_mus),
+                          rownames(ciona_ans_list$edgeR_res_list$noto_mes),
+                          rownames(ciona_ans_list$edgeR_res_list$noto_epi),
+                          rownames(ciona_ans_list$edgeR_res_list$noto_endo),
+                          rownames(ciona_ans_list$edgeR_res_list$noto_cns))
+
+# We don't just care about the genes in common, but their expression levels.
+# Only 127 indices in common among these tissues. 
+# 2573 -> 509
+mike_ciona_cns_degs <- unique(mike_ciona_cns_degs)
+mike_ciona_cns_one2one_indices <- which(one2one_khid_list %in% mike_ciona_cns_degs)
+# 2336 -> 380 
+mike_ciona_mus_degs <- unique(mike_ciona_mus_degs)
+mike_ciona_mus_one2one_indices <- which(one2one_khid_list %in% mike_ciona_mus_degs)
+# 2283 -> 442
+mike_ciona_noto_degs <- unique(mike_ciona_noto_degs)
+mike_ciona_noto_one2one_indices <- which(one2one_khid_list %in% mike_ciona_noto_degs)
+
+```
+
+

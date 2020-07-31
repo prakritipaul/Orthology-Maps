@@ -1,0 +1,328 @@
+---
+title: "validate_get_geneset_v4_pairwise"
+output: html_document
+---
+# TO DO: 
+#     1. Fix the dplyr stuff at the end.
+#     2. Get rid of cor, keep just the cor.test implementation.
+
+# Version for pairwise DEGs. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+```
+
+# Gene List
+```{r include=TRUE}
+one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
+
+one_one_df <- read.table(one_one_dir,
+                         sep = ",",
+                         header = FALSE,
+                         stringsAsFactors = FALSE)
+
+one2one_khid_list = one_one_df$V1
+one2one_zeb_genes = one_one_df$V2
+```
+
+"""
+Helper Function to make Gene Specificity Matrix (Tosches)
+"""
+```{r include=TRUE}
+make_gene_specificity_matrix <- function(average_expression_matrix) {
+  # Given an average expression matrix, convert to a gene specificity matrix (Tosches)
+  # Args:
+  #   average_expression_matrix: 
+  #       e.g. ciona_average_expression_matrix <- cbind(ciona_df_1, ciona_df_2)
+  #
+  # Routine:
+  #     g_c/(1/N)sum(i in C)g_i
+  #
+  # Returns:
+  #   gsm: Output of above routine.
+  gsm_1 <- average_expression_matrix
+  # makes new column with  mean of the row (average expression of gene across all cell types)
+  gsm_1 <- gsm_1 %>% mutate(gene_CTs_avexp = rowMeans(.))
+  num_cell_types <- ncol(gsm_1)-1
+  gsm <- gsm_1[, 1:num_cell_types]/gsm_1[, num_cell_types+1]
+  
+  return(gsm)
+}
+```
+
+```{r include=TRUE}
+'%notin%' <- Negate('%in%')
+```
+
+"""""""""""""""""""""""""""""""
+Workflow
+
+final_khids/final_zeb_genes (25, already 1-1 orthologs)
+one2one2_khid_list/one2one2_zeb_genes (2592, already 1-1 orthologs)
+
+"""""""""""""""""""""""""""""""
+
+###################################################
+
+# Pairwise DEGs from all Ciona CTs and 12 Zeb CTs
+```{r include=TRUE}
+v4_ciona_pairwise_degs <- ciona_ans_list$unique_edgeR_degs
+v4_ciona_pairwise_degs_0 <- ciona_ans_list_0$unique_edgeR_degs
+
+v4_zeb_pairwise_degs <- zeb_ans_list$unique_edgeR_degs
+v4_zeb_pairwise_degs_0 <- zeb_ans_list_0$unique_edgeR_degs
+```
+
+###################################################
+
+### DO THIS!!! ###
+### INPUT v4_ciona_pairwise_degs_0 HERE ###
+
+###################################################
+
+# Input pairwise DEG lists.
+```{r include=TRUE}
+khid_pairwise <- v4_ciona_pairwise_degs
+zeb_gene_pairwise <- v4_zeb_pairwise_degs
+```
+
+##################################################
+
+# Get all unfiltered genes in Zeb and Ciona. 
+# Checks if input genes can be used for downstream analyses. 
+```{r include=TRUE}
+zeb_data <- zeb_integrated_50[["RNA"]]@data
+zeb_rownames <- rownames(zeb_data)
+
+unfiltered_zeb_pairwise <- intersect(zeb_rownames, zeb_gene_pairwise)
+
+ciona_data <- clean_chen_larva_integrated_20[["RNA"]]@data
+ciona_rownames <- rownames(ciona_data)
+
+unfiltered_ciona_pairwise <- intersect(ciona_rownames, khid_pairwise)
+```
+
+# Get the indices of 1-1 orthologs that are pairwise DEGs.
+```{r include=TRUE}
+zeb_pairwise_ortho_indices <- which(one2one_zeb_genes %in% zeb_gene_pairwise)
+ciona_pairwise_ortho_indices <- which(one2one_khid_list %in% khid_pairwise)
+```
+
+```{r include=TRUE}
+common_pairwise_indices <- intersect(zeb_pairwise_ortho_indices, ciona_pairwise_ortho_indices)
+```
+
+# Get qualified genes.
+```{r include=TRUE}
+qualified_zeb_genes <- one2one_zeb_genes[common_pairwise_indices]
+qualified_ciona_khids <- one2one_khid_list[common_pairwise_indices]
+```
+
+"""
+Ciona: Make Average Expression Dataframes for Ciona CTs (7).
+ciona_avexp_df_v4 = ciona_df
+"""
+
+## Speficy ciona_cell_type_list and  ##
+```{r include=TRUE}
+ciona_dummy_col <- rep(0, length(qualified_ciona_khids))
+ciona_df <- data.frame(ciona_dummy=ciona_dummy_col)
+
+for (i in 1:length(ciona_cell_type_list)) {
+  cat("i = ", i, "\n")
+  ciona_cells <- ciona_cell_type_list[[i]]
+  # Get gene exp values for all cells in a CT.
+  ciona_data_pre <- ciona_data[qualified_ciona_khids, ciona_cells]
+  ciona_data_df <- as.data.frame(ciona_data_pre)
+  # Get av exp for each gene for all CTs.
+  ciona_row <- rowMeans(ciona_data_df)
+  ciona_df <- cbind(ciona_df, ciona_row)
+}
+
+# Remove ciona_dummy column.
+ciona_df <- subset(ciona_df, select=-(ciona_dummy))
+
+ciona_colnames <- names(ciona_cell_type_list)
+colnames(ciona_df) <- ciona_colnames
+
+# The Average Expression Dataframe 
+ciona_avexp_df_v4 <- ciona_df
+```
+
+"""
+Zeb: Make Average Expression Dataframes for Zeb CTs (16).
+zeb_avexp_df_v4 = zeb_df
+
+These are the same CTs used in Module v3 in "get_geneset_troubleshooting.Rmd"
+"""
+
+## Specify zeb_cell_type_list_v4 ##
+```{r include=TRUE}
+zeb_cell_type_list_v4 <- zeb_CT_12
+```
+                             
+```{r include=TRUE}
+zeb_dummy_col <- rep(0, length(qualified_zeb_genes))
+zeb_df <- data.frame(zeb_dummy=zeb_dummy_col)
+
+####
+
+for (i in 1:length(zeb_cell_type_list_v4)) {
+  cat("i = ", i, "\n")
+  zeb_cells <- zeb_cell_type_list_v4[[i]]
+  # Get gene exp values for all cells in a CT.
+  zeb_data_pre <- zeb_data[qualified_zeb_genes, zeb_cells]
+  zeb_data_df <- as.data.frame(zeb_data_pre)
+  # Get av exp for each gene for all CTs.
+  zeb_row <- rowMeans(zeb_data_df)
+  zeb_df <- cbind(zeb_df, zeb_row)
+}
+
+# Remove ciona_dummy column.
+zeb_df <- subset(zeb_df, select=-(zeb_dummy))
+
+zeb_colnames <- names(zeb_cell_type_list_v4)
+colnames(zeb_df) <- zeb_colnames
+
+# The Average Expression Dataframe
+zeb_avexp_df_v4 <- zeb_df
+```
+
+"""
+Make the GSM Dataframes, Cor Df 
+"""
+```{r include=FALSE}
+ciona_gsm_v4 <- make_gene_specificity_matrix(ciona_avexp_df_v4)
+zeb_gsm_v4 <- make_gene_specificity_matrix(zeb_avexp_df_v4)
+```
+
+##############################################################
+
+### HERE IS WHERE YOU USE THE NEW MAKE_COR_DF FUNCTION
+
+##############################################################
+
+```{r include=TRUE}
+make_COR_TEST_df <- function(ciona_gsm, zeb_gsm) {
+  cz_cor_df <- data.frame(ciona_CTs = 0,
+                             zeb_CTs = 0,
+                             p_val = 0,
+                             rho = 0)
+  
+  for (i in 1:ncol(ciona_gsm)) {
+    for (j in 1:ncol(zeb_gsm)) {
+      # CT expression vectors 
+      ciona_CT_col <- ciona_gsm[, i]
+      zeb_CT_col <- zeb_gsm[, j]
+      # CT name
+      ciona_CT <- colnames(ciona_gsm)[i]
+      zeb_CT <- colnames(zeb_gsm)[j]
+      cat("i= ", i, "j= ", j, "ciona_CT= ", ciona_CT, "zeb_CT= ", zeb_CT, "\n")
+      cz_COR_TEST_res <- cor.test(ciona_CT_col, zeb_CT_col, method = "spearman")
+      cz_p_val <- cz_COR_TEST_res$p.value
+      cz_rho <- cz_COR_TEST_res$estimate
+      
+      cz_row <- c(ciona_CT, zeb_CT, cz_p_val, cz_rho)
+      cat("row = ", cz_row)
+      cz_cor_df <- rbind(cz_cor_df, cz_row)
+    }
+  }
+  cz_cor_df <- cz_cor_df[-1, ]
+  return(cz_cor_df)
+}
+```
+
+##############################################################
+
+### TEST MAKE_COR_DF FUNCTION
+
+##############################################################
+
+### DO THIS!!! ###
+
+# Test make_COR_TEST_df
+```{r include=TRUE}
+test_c_gsm <- ciona_gsm_v4
+test_z_gsm <- zeb_gsm_v4
+test_cor_test <- make_COR_TEST_df(test_c_gsm, test_z_gsm)
+
+```
+
+##############################################################
+
+### SKIP THIS HERE IS WHERE YOU USE THE NEW MAKE_COR_DF FUNCTION
+
+### INITAL/REAL TEST WITHOUT P-VALS
+
+```{r include=TRUE}
+cor_df_v4 <- make_cor_df(ciona_gsm_v4, zeb_gsm_v4)
+```
+
+##############################################################
+
+                              ***
+
+##############################################################
+
+### DO THIS!!! ###
+
+### USE TEST_COR_TEST TO MAKE HEATMAP 
+
+```{r include=TRUE}
+# test_c_gsm <- ciona_gsm_v4
+# test_z_gsm <- zeb_gsm_v4
+# test_cor_test <- make_COR_TEST_df(test_c_gsm, test_z_gsm)
+
+cor_df_v4 <- test_cor_test
+cor_df_v4 <- cor_df_v4 %>% transform(rho = as.numeric(rho))
+```
+
+##### VISUALIZE IT!!!
+
+```{r include=TRUE}
+# "RdYlBu", "PiYG"
+cor_df_v4_heatmap <- ggplot(data = cor_df_v4,
+                         aes(x=ciona_CTs, y=zeb_CTs, fill=rho)) +
+                         geom_tile() +
+                         scale_fill_distiller(palette = "RdBu")
+              
+
+cor_df_v4_heatmap
+```
+
+##### WE CAN SEE WHICH PAIRS HAVE SIGNIFICANT P-VALUES ######
+```{r include=TRUE}
+test_sig <- subset(cor_df_v4, p_val < 5e-2)
+```
+
+
+
+
+
+
+
+
+### ZEB CT LISTS ###
+```{r include=TRUE}
+
+zeb_CT_12 <- list(noto = noto,
+                 heart_52 = heart_52,
+                 heart_51_56 = heart_51_56,
+                 muscles = muscles,
+                 epi_1 = epi_1,
+                 epi_2 = epi_2,
+                 panc_prim_endo = panc_prim_endo,
+                 meso = meso,
+                 pec_fin_bud = pec_fin_bud,
+                 leuko = leuko,
+                 diff_neus = diff_neus,
+                 tail_spinal_cord = tail_spinal_cord)
+```
+
+

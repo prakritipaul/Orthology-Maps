@@ -1,0 +1,145 @@
+---
+title: "cz_CT_dict_helper"
+output: html_document
+---
+
+# Follows from: "zeb_degs_heatmaps.Rmd"
+
+# Works in parallel with: code in "get_all_orthologs" directory in Git.
+# Above is part of Cocktail project, in which orthologous genes are used to infer
+# orthologous Cell Types.
+
+# General Description
+# 1) Calculates top50 DEGs for Ciona Tissues. Present in ciona_marker_df_list.
+# 2) Uses top50 DEGs calculated for Zeb Tissues from "zeb_degs_heatmaps.Rmd".
+#    Present in zeb_marker_df_list.
+# 3) Creates .csv files that have "num_DEG" (10) DEGs for each CT. 
+#    for munging in "make_cocktail_dicts.py" -> creates ciona/zeb_cocktail_dicts.
+
+# Uses env_get_pairwise_zeb_ciona_degs/get_geneset_troubleshooting.RData.
+
+# TO DO Segways into <insert name>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=TRUE}
+library(Seurat)
+```
+
+"""
+Top50 Ciona DEGs
+"""
+
+```{r include=TRUE}
+# I can use cell names for heart and muscle that came from putative_hm_seurat
+# because these cells come from clean_chen_larva_integrated_20.
+ciona_marker_df_list = list()
+
+ciona_cell_type_flags <- c("endo", "epi", "mes", "mus", "heart", "cns", "noto")
+
+for (i in 1:length(ciona_cell_type_list)) {
+  cat("Now doing ", i, "=", ciona_cell_type_flags[i], "\n\n")
+  
+  ciona_marker_df <- get_top_n_df(ciona_cell_type_list[[i]], clean_chen_larva_integrated_20, "MAST", 50)
+  
+  ciona_marker_df_list[[ciona_cell_type_flags[i]]] <- ciona_marker_df
+}
+
+```
+
+"""
+Write out top10 DEGs as .csv
+"""
+
+```{r include=TRUE}
+make_topN_df <- function(marker_df_list, num_DEGs) {
+  # Given a marker_df_list of top50 DEG dataframes, make a dataframe with 
+  # num_DEGs DEGs for every CT in the marker_df_list.
+  # 
+  # This df will be used to generate a .csv file of e.g. this structure: 
+  # "endo", KHID_1... KHID_(num_DEGs)...
+  #
+  # Args:
+  #   marker_df_list: e.g. ciona_marker_df_list ["endo": top50_df]
+  #   num_DEGs: the number of DEGs you want to export.
+  #
+  # Returns:
+  #   topN_df: Each row is a CT name.
+  #            Each column (num_DEG) is the name of a DEG. 
+  topN_matrix <- matrix(ncol=num_DEGs, nrow=length(marker_df_list))
+  
+  for(i in 1:length(marker_df_list)) {
+    CT_df <- marker_df_list[[i]]
+    topN_row <- rownames(CT_df)[1:num_DEGs]
+    topN_matrix[i, ] <- topN_row
+  }
+  rownames(topN_matrix) <- names(marker_df_list)
+  topN_df <- data.frame(topN_matrix)
+  return(topN_df)
+}
+```
+
+# Ciona 
+```{r include=TRUE}
+ciona_top10_df <- make_topN_df(ciona_marker_df_list, 10)
+
+write.table(ciona_top10_df, 
+            "ciona_top10_df.csv",
+            col.names = FALSE,
+            sep = ",")
+```
+
+# Zeb 1
+# 1st need to make a list of df's that I want.
+```{r include=TRUE}
+# This list consists of the CTs present in "get_geneset_troubleshooting.Rmd"
+zeb_marker_df_list = list()
+
+zeb_marker_df_list$noto <- marker_df_list_1$noto
+zeb_marker_df_list$heart_52 <- marker_df_list_1$heart_52
+zeb_marker_df_list$heart_51_56 <- marker_df_list_1$heart_51_56
+zeb_marker_df_list$muscles <- marker_df_list_1$muscles
+zeb_marker_df_list$epi_1 <- marker_df_list_1$epi_1
+zeb_marker_df_list$epi_2 <- marker_df_list_1$epi_2
+zeb_marker_df_list$panc_prim_endo <- marker_df_list_1$panc_prim_endo
+zeb_marker_df_list$ph_arch_ndnf <- marker_df_list_1$ph_arch_ndnf
+
+zeb_marker_df_list$diff_neus <- marker_df_list_2$diff_neus
+zeb_marker_df_list$nc_grem2 <- marker_df_list_2$nc_grem2
+
+zeb_marker_df_list$meso <- marker_df_list_4$meso
+zeb_marker_df_list$pec_fin_bud <- marker_df_list_4$pec_fin_bud
+zeb_marker_df_list$iono <- marker_df_list_4$iono
+zeb_marker_df_list$leuko <- marker_df_list_4$leuko
+zeb_marker_df_list$lens <- marker_df_list_4$lens
+zeb_marker_df_list$optic_cup <- marker_df_list_4$optic_cup
+```
+
+# Zeb 2
+```{r include=TRUE}
+zeb_top10_df <- make_topN_df(zeb_marker_df_list, 10)
+
+write.table(zeb_top10_df, 
+            "zeb_top10_df.csv",
+            col.names = FALSE,
+            sep = ",")
+```
+
+
+
+"""
+Old 
+"""
+# Testing expression patterns of DEGs 
+```{r include=TRUE}
+test_cns <- rownames(ciona_marker_df_list$cns)
+
+FeaturePlot(clean_chen_larva_integrated_20,
+            features = c(test_cns[1:6], cns_markers[1:3]))
+```
+
+```
+```
+

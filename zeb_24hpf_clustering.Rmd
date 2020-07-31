@@ -292,7 +292,7 @@ DEGs to Use: Supp Table 2
 
 ```{r include=TRUE}
 # noto- DONE
-noto_50_degs <- c("ntd5", "aplp2", "emilin3a", "pmp22b", "loxl5b", "ta", "si:dkey-12l12.1", "plod1a", "calua", "fstl1b", "fn1a", "LOC100333762", "col2a1a", "serpinh1b", "fxyd1", "LOC100149028", "fstl1a", "col11a1a", "cmn", "col2a1b", "emilin3a", "si:dkey-12l12.1", "loxl5b", "ta", "LOC100333762", "LOC100149028", "ntd5", "fxyd1", "cmn", "pmp22b", "fn1a", "plod1a", "serpinh1b", "calua", "aplp2", "col11a1a", "fstl1a", "col2a1a", "fstl1b", "col2a1b")
+noto_50_degs <- c("ntd5", "aplp2", "emilin3a", "pmp22b", "loxl5b", "ta", "si:dkey-12l12.1", "plod1a", "calua", "fstl1b", "fn1a", "LOC100333762", "col2a1a", "serpinh1b", "fxyd1", "LOC100149028", "fstl1a", "col11a1a", "cmn", "col2a1b", "emilin3a", "si:dkey-12l12.1", "loxl5b", "ta", "LOC100333762", "LOC1001|49028", "ntd5", "fxyd1", "cmn", "pmp22b", "fn1a", "plod1a", "serpinh1b", "calua", "aplp2", "col11a1a", "fstl1a", "col2a1a", "fstl1b", "col2a1b")
 
 
 # Hearts (3) # - DONE

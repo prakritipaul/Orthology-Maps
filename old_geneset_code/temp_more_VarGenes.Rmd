@@ -1,0 +1,235 @@
+---
+title: "temp_more_VarGenes"
+output: html_document
+---
+
+# Increase zeb_n_features - increase upper bound of DEGs that can be found # # dims=50, n_anchor_feats=8000, npcs=70. Note: n_anchor_feats=10000 crashed on Vera.   
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+library(edgeR)
+```
+
+"""
+Helper Functions
+"""
+
+(1) Make raw matrix data frames
+```{r include=TRUE}
+make_zeb_df <- function(zeb_dir) {
+  zeb_df <- read.table(zeb_dir,
+                       sep = ",",
+                       header = TRUE,
+                       stringsAsFactors = FALSE)
+  
+  rownames(zeb_df) <- zeb_df$Row
+  zeb_df$Row <- NULL
+  
+  return(zeb_df)
+}
+```
+
+(2) Make Individual Seurat Objects. 
+```{r include=TRUE}
+make_zeb_seurat <- function(zeb_df, min_cells, min_features, n_features){
+  zeb_seurat <- CreateSeuratObject(counts = zeb_df,
+                                   min.cells = min_cells, 
+                                   min.features = min_features)
+  
+  zeb_seurat <- NormalizeData(object = zeb_seurat)
+  
+  zeb_seurat <- FindVariableFeatures(zeb_seurat, 
+                                     selection.method = "vst",
+                                     nfeatures = n_features)
+  return(zeb_seurat)
+  }
+```
+
+
+"""
+Make Raw Matrix Dataframes.
+"""
+# T = 34750 (exactly what is reported in Fig S2B)
+```{r include=TRUE}
+zeb_24hpf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067195_24hpf.csv" 
+
+# 7970
+zeb_24hpf_df <- read.table(zeb_24hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+# Clean up the dataframe
+rownames(zeb_24hpf_df) <- zeb_24hpf_df$Row
+zeb_24hpf_df$Row <- NULL
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067196,  
+```{r include=TRUE}
+zeb_t1_dir <- "~/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067196_TracerSeq1.csv"
+# 5752
+zeb_t1_24hpf_df <- make_zeb_df(zeb_t1_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067197,
+```{r include=TRUE}
+zeb_t2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067197_TracerSeq2.csv"
+# 8874
+zeb_t2_24hpf_df <- make_zeb_df(zeb_t2_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067198,
+```{r include=TRUE}
+zeb_t3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067198_TracerSeq3.csv"
+# 2861
+zeb_t3_24hpf_df <- make_zeb_df(zeb_t3_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067199,
+```{r include=TRUE}
+zeb_t4_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067199_TracerSeq4.csv"
+# 6495
+zeb_t4_24hpf_df <- make_zeb_df(zeb_t4_dir)
+```
+
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM3067200
+```{r include=TRUE}
+zeb_t5_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/GSM3067200_TracerSeq5.csv"
+# 2844
+zeb_t5_24hpf_df <- make_zeb_df(zeb_t5_dir)
+```
+
+
+"""
+Perform standard pre-processing steps on each Seurat object.
+
+https://satijalab.org/seurat/v3.1/integration.html
+"""
+
+```{r include=TRUE}
+zeb_min_cells <- 3
+zeb_min_features <- 200
+zeb_n_features <- 8000
+```
+
+```{r include=TRUE}
+zeb_24hpf_seurat <- make_zeb_seurat(zeb_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+```
+
+```{r include=TRUE}
+
+zeb_t1_24hpf_seurat <- make_zeb_seurat(zeb_t1_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t2_24hpf_seurat <- make_zeb_seurat(zeb_t2_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t3_24hpf_seurat <- make_zeb_seurat(zeb_t3_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t4_24hpf_seurat <- make_zeb_seurat(zeb_t4_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+
+zeb_t5_24hpf_seurat <- make_zeb_seurat(zeb_t5_24hpf_df,
+                                    zeb_min_cells,
+                                    zeb_min_features,
+                                    zeb_n_features)
+```
+
+"""
+Make list of above Seurat Objects
+"""
+
+```{r include=TRUE}
+zeb_seurat_list <- list(zeb_24hpf_seurat, zeb_t1_24hpf_seurat, zeb_t2_24hpf_seurat, zeb_t3_24hpf_seurat, zeb_t4_24hpf_seurat, zeb_t5_24hpf_seurat)
+```
+
+
+"""
+Integration Routine Pieces
+"""
+```{r include=TRUE}
+test_dims <- 50
+test_n_anchor_feats <- 8000
+test_object_list <- zeb_seurat_list
+```
+
+```{r include=TRUE}
+zeb_anchors <- FindIntegrationAnchors(object.list = test_object_list,
+                                      dims = 1:test_dims,
+                                      anchor.features = test_n_anchor_feats)
+```
+
+```{r include=TRUE}
+cat("IntegrateData, \n\n")
+zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:test_dims)
+```
+
+```{r include=TRUE}
+cat("DefaultAssay, \n\n")
+DefaultAssay(zeb_integrated) <- "integrated"
+```
+
+```{r include=TRUE}
+cat("ScaleData, \n\n")
+```
+
+
+################### INTEGRATION PIPELINE ####################
+
+# Helper Function
+```{r include=TRUE}
+make_integrated_seurat <- function(object_list, dims, n_anchor_feats, npcs){
+  # Args:
+    # object_list: list of Seurat objects. e.g. zeb_seurat_list.
+    # dims: input dimensions for FindIntegrationAnchors and IntegrateData. 
+    # npcs: # pcs for PCA and TSNE.
+  
+  # Routine: Do integration. Scale, PCA, TSNE.
+  
+  # Returns:
+    # integrated_seurat: output of above routine.
+  cat("Finding Zeb Anchors, \n\n")
+  zeb_anchors <- FindIntegrationAnchors(object.list = object_list,
+                                      dims = 1:dims,
+                                      anchor.features = n_anchor_feats)
+  cat("IntegrateData, \n\n")
+  zeb_integrated <- IntegrateData(anchorset = zeb_anchors, dims = 1:dims)
+  cat("DefaultAssay, \n\n")
+  DefaultAssay(zeb_integrated) <- "integrated"
+  cat("ScaleData, \n\n")
+  zeb_integrated <- ScaleData(zeb_integrated, verbose = FALSE)
+   cat("RunPCA, \n\n")
+  zeb_integrated <- RunPCA(zeb_integrated, npcs = npcs, verbose = FALSE)
+   cat("RunTSNE, \n\n")
+  zeb_integrated <- RunTSNE(zeb_integrated, dims = 1:npcs)
+  
+  return(zeb_integrated)
+}
+```
+
+<!-- # dims=50, n_anchor_feats=8000, npcs=70  -->
+<!-- ```{r include=TRUE} -->
+<!-- zeb_integrated_50 <- make_integrated_seurat(zeb_seurat_list, 50, 8000, 70) -->
+<!-- ``` -->
+

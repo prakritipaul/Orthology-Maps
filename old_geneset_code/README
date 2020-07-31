@@ -1,0 +1,24 @@
+README
+old_geneset_code directory 
+
+(1) "get_pairwise_zeb_ciona_degs.Rmd" (v1)
+For each species:
+1. Get pairwise DEGs (MAST)- top50 - superset. All 43 Zeb CTs.
+2. Filter for 1-1 orthologs.
+3. Take intersection (6)
+
+Relevant variables:
+unique_test_ciona_deg_vec (444)
+unique_zeb_deg_vec (1372)
+
+(2) "get_geneset_troubleshooting.Rmd" (v3)
+-1-1 orthos within 2000 Var Genes -> intersection (25)
+-First crappy Tosches implementation (major functions)
+
+
+(3) "old_get_geneset_v4.Rmd" (v4)
+-Cleaner Tosches implementation. 
+-Workflows present in "get_geneset_v4.Rmd" and "get_geneset_v4_pairwise.Rmd"
+-Used for unfiltered/qualified 2592 1-1 orthos
+T=2967; Ciona=2956; Zeb=2500
+

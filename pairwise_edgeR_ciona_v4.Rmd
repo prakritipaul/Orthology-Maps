@@ -1,0 +1,197 @@
+---
+title: "get_pairwise_cz_degs_v4"
+output: html_document
+---
+---
+title: "get_pairwise_zeb_ciona_degs"
+output: html_document
+
+---
+
+# Uses slim_env_v4.RData.
+
+# ciona_ans_list_(0) were generated here.
+# Correspond to v4_pairwise_ciona_(0).RData.
+
+# Generates pairwise DEGs for all 7 Ciona tissues.   
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+# library(Hmisc)
+library(pvclust)
+library(edgeR)
+```
+
+*** Ciona Count Data ***
+
+```{r include=TRUE}
+# How to get raw counts
+ciona_counts <- clean_chen_larva_integrated_20[["RNA"]]@counts
+```
+
+# Pairwise 
+```{r include=TRUE}
+ciona_ans_list_0 <- master_edgeR_pipeline(ciona_mats, 0.05, -2)
+```
+
+"""
+HELPER FUNCTIONS
+"""
+```{r include=TRUE}
+edgeR_pipeline <- function(pair_mat, rep_1, rep_2){
+  # Given a matrix with gene expression values for 2 CTs, get DEGs.
+  # Args:
+  #       pair_mat: As above.
+  #       e.g. psc_wt_mat (a_b_mat)
+  #
+  #       rep_1; rep_2: Number of cells for each CT. 
+  #       e.g. ncol(a_mat); ncol(b_mat)
+  #
+  # Returns:
+  #       edgeR_res: Dataframe with columns logFC, logCPM, F, PValue.
+  #       Note: Want edgeR output logFC < 0 to get genes that are more 
+  #             highly expressed in rep_1 compared to rep_2.  
+
+  group = factor(c(rep(1, rep_1), rep(2, rep_2)))
+  y = DGEList(counts=pair_mat, group=group)
+  y = calcNormFactors(y)
+  design = model.matrix(~group)
+  y = estimateDisp(y, design)
+  
+  fit <- glmQLFit(y,design)
+  # Find DEGs between two CTs.
+  qlf <- glmQLFTest(fit,coef=2)
+  # Save results as a Dataframe.
+  edgeR_res <- qlf$table
+  return(edgeR_res)
+}
+```
+
+```{r include=TRUE}
+sort_edgeR_res <- function(edgeR_res, adj_PValue_thresh) {
+  # Given the output of edgeR_pipeline, sort DEGs by logFC and adjusted p-value.
+  # 
+  # Args:
+  #     edgeR_res: Dataframe returned by edgeR_pipeline.
+  #     adj_PValue_thresh: Threshold.
+  #
+  # Returns:
+  #     sorted_edgeR_res: Self-explanatory. (Dataframe)
+  
+  sorted_edgeR_res <- edgeR_res
+  sorted_edgeR_res <- sorted_edgeR_res[order(sorted_edgeR_res$logFC), ]
+  # Make adj_PValue column. 
+  adj_pValues <- p.adjust(sorted_edgeR_res$PValue, method="fdr", nrow(sorted_edgeR_res))
+  sorted_edgeR_res$adj_PValue = adj_pValues
+  # Sort. 
+  sorted_edgeR_res <- sorted_edgeR_res[sorted_edgeR_res$adj_PValue < adj_PValue_thresh, ]
+  # Filter. 
+
+  return(sorted_edgeR_res)
+}
+```
+
+```{r include=TRUE}
+filter_edgeR_res <- function(sorted_edgeR_res, logFC_thresh) {
+  # Given a sorted edgeR output (Dataframe), filter DEGs given a logFC threshold.
+  #
+  # Args:
+  #     sorted_edgeR_res, logFC_threshold: Self-explanatory.
+  #
+  # Returns:
+  #     filtered_edgeR_res: Self-explanatory. (Dataframe)
+  
+  filtered_edgeR_res <- sorted_edgeR_res
+  filtered_edgeR_res <- filter(filtered_edgeR_res, logFC < logFC_thresh)
+  rownames(filtered_edgeR_res) <- rownames(sorted_edgeR_res)[1:nrow(filtered_edgeR_res)]
+  
+  return(filtered_edgeR_res)
+} 
+```
+
+*** For Pairwise DEG Calculations ***
+
+```{r include=TRUE}
+master_edgeR_pipeline <- function(mats, adj_PValue_thresh, logFC_thresh) {
+  # Pipeline description below.
+  # 
+  # Args:
+  #     mats: List of raw matrices of various CTs.
+  #     e.g. ciona_mats <- list(noto = ciona_noto_mat)
+  #          where ciona_noto_mat <- ciona_counts[, ciona_larva_noto]
+  #
+  # Routine:
+  #     1. Perform pairwise edgeR among all CTs.
+  #     2. Sort and filter edgeR_res Dataframe -> filtered_edgeR_res.
+  #     3. Save these in edgeR_res_list.
+  #     4. Add DEGs to edgeR_degs.
+  #     5. Get the unique DEGs. Present in unique_edgeR_degs.
+  #
+  # Returns:
+  #     ans_list: list containing edgeR_res_list and unique_edgeR_degs.
+  names <- names(mats)
+  
+  edgeR_res_list <- list()
+  # 8445
+  edgeR_degs <- c()
+    
+  for (i in 1:length(mats)) {
+    for (j in 1:length(mats)) {
+      if (i != j) {
+        name_1 <- names[[i]]
+        name_2 <- names[[j]]
+        cat("i = ", i, "CT1 = ", name_1, "j = ", j, "CT2 = ", name_2, "\n\n")
+        
+        pair_1 <- mats[[i]]
+        pair_2 <- mats[[j]] 
+        pair_mat <- cbind(pair_1, pair_2)
+        
+        # Do edgeR 
+        edgeR_res <- edgeR_pipeline(pair_mat, ncol(pair_1), ncol(pair_2))
+        # Sort
+        sorted_edgeR_res <- sort_edgeR_res(edgeR_res, adj_PValue_thresh)
+        # Filter
+        filtered_edgeR_res <- filter_edgeR_res(sorted_edgeR_res, logFC_thresh)
+        # 
+        pair_mat_name <- paste0(name_1, "_", name_2)
+        edgeR_res_list[[pair_mat_name]] <- filtered_edgeR_res
+        # Get DEGs
+        DEGs <- rownames(filtered_edgeR_res)
+        edgeR_degs <- c(edgeR_degs, DEGs)
+      }
+    }
+  }
+  
+  unique_edgeR_degs<- unique(edgeR_degs)
+  ans_list <- list("edgeR_res_list" = edgeR_res_list,
+                   "unique_edgeR_degs" = unique_edgeR_degs)
+  return(ans_list)
+  }
+```
+
+
+# Pairwise 
+```{r include=TRUE}
+ciona_noto_mat <- ciona_counts[, ciona_larva_noto]
+ciona_heart_mat <- ciona_counts[, ciona_larva_heart]
+ciona_mus_mat <- ciona_counts[, ciona_larva_mus]
+ciona_mes_mat <- ciona_counts[, ciona_larva_mes]
+ciona_epi_mat <- ciona_counts[, ciona_larva_epi]
+ciona_endo_mat <- ciona_counts[, ciona_larva_endo]
+ciona_cns_mat <- ciona_counts[, ciona_larva_cns]
+
+ciona_mats <- list(noto = ciona_noto_mat,
+                   heart = ciona_heart_mat,
+                   mus = ciona_mus_mat,
+                   mes = ciona_mes_mat,
+                   epi = ciona_epi_mat,
+                   endo = ciona_endo_mat,
+                   cns = ciona_cns_mat)
+```
