@@ -167,6 +167,44 @@ zeb_MAST_ans <- master_MAST_pipeline(zeb_integrated,
                                  min_pct_thresh = 0.2)
 ```
 
+"""
+8/19/20
+
+Do I get more than 2k genes if I change "features" of seurat object
+with all genes?
+
+"""
+```{r include=TRUE}
+# 2000 Variable Genes 
+true_chen_rownames <- rownames(clean_chen_larva_integrated_20)
+
+# Normalized Data
+test_chen_data <- clean_chen_larva_integrated_20[["RNA"]]@data
+# All genes (~14k)
+test_chen_rownames <- as.vector(rownames(test_chen_data))
+```
+
+```{r include=TRUE}
+# Replace
+rownames(clean_chen_larva_integrated_20) <- "llama"
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

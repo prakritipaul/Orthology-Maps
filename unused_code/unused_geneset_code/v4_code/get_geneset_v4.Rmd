@@ -60,6 +60,15 @@ one2one_khid_list = one_one_df$V1
 one2one_zeb_genes = one_one_df$V2
 ```
 
+# Import KHID -> Human Ortholog File
+```{r include=TRUE}
+khid_human_ortho_dir <- "/home/pprakriti/Desktop/orthology_maps_temps/ANISEED-Cirobu-GeneName-3bestBlastHitHuman.rnames"
+khid_human_ortho_df <- read.table(khid_human_ortho_dir,
+                                  sep = "\t",
+                                  stringsAsFactors = FALSE,
+                                  header = TRUE)
+```
+
 """
 Helper Function to make Gene Specificity Matrix (Tosches)
 """

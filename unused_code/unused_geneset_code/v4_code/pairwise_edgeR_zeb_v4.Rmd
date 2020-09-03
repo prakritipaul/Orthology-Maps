@@ -18,9 +18,9 @@ knitr::opts_chunk$set(echo = TRUE)
 # Intractable in Vera! 
 # Note: zeb_counts = 30677 x 34750 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Under TESTING TESTING TESTING:
+# small_test_pair.R tests 1 computation of Noto vs Noto' (DEGs for all genes).
+# I can run this script in gen-comp2 and get a csv output. 
 
 ```{r include=FALSE}
 library(Seurat)
@@ -97,6 +97,7 @@ for (i in 1:length(zeb_cell_type_list)) {
   all_zeb_mats[[CT_name]] <- CT_df
 }
 ```
+
 ### TRY THIS!!! ###
 ```{r include=TRUE}
 all_zeb_ans_list <- master_edgeR_pipeline(all_zeb_mats, 0.05, 1)
@@ -242,152 +243,16 @@ master_edgeR_pipeline <- function(mats, adj_PValue_thresh, logFC_thresh) {
 End Helper Functions
 """
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #####  TESTING TESTING #####
 
-<!-- ```{r include=TRUE} -->
-<!-- write.csv(zeb_counts, "/home/pprakriti/Desktop/zeb_counts.csv") -->
-<!-- ``` -->
+"""
+Get DEGs of Noto vs. Noto' for all genes. 
 
-# Let's first filter the raw matrices, and then run edgeR on them. 
-```{r include=TRUE}
-test.mat <- as.data.frame(matrix(c(3, 0, 1, 0, 
-                                   4, 1, 2, 0, 
-                                   2, 0, 1, 0,
-                                   0, 1, 1, 2),
-                   nrow=4,
-                   ncol=4,
-                   byrow = TRUE))
+This is only 1 computation.
 
-colnames(test.mat) <- c("cell_1", "cell_2", "cell_3", "cell_4")
-rownames(test.mat) <- c("gene_1", "gene_2", "gene_3", "gene_4")
-```
+Intractable on Vera.  
+"""
 
-```{r include=TRUE}
-test.zeb.counts <- zeb_counts[1:30, 1:10]
-```
-
-########################################
-
-# (1a) Turn all non-0 integers to 1
-```{r include=TRUE}
-test.mat.2 <- test.mat
-test.mat.2[test.mat.2 != 0] <- 1
-```
-
-# (1b)
-```{r include=TRUE}
-test.zeb.counts.2 <- test.zeb.counts
-test.zeb.counts.2[test.zeb.counts.2 != 0] <- 1
-```
-
-# (Real)
-```{r include=TRUE}
-zeb.counts.2 <- zeb_counts
-zeb.counts.2[zeb.counts.2 != 0] <- 1
-```
-
-
-# (2a) Are there any non-1 elements?
-```{r include=TRUE}
-any(test.mat > 1)
-any(test.mat.2 > 1)
-```
-
-# (2b) 
-```{r include=TRUE}
-any(test.zeb.counts > 1)
-any(test.zeb.counts.2 > 1)
-```
-
-# (Real) 
-```{r include=TRUE}
-# any(zeb_counts > 1)
-any(zeb.counts.2 > 1)
-```
-
-# (3a) Get indices of unfiltered genes and cells.
-```{r include=TRUE}
-test.min.cells <- 3
-test.min.genes <- 2
-
-test.gene.indices.mat <- which(rowSums(test.mat.2) >= test.min.cells)
-test.cells.indices.mat <- which(colSums(test.mat.2) >= test.min.genes)
-```
-
-# (3b)
-```{r include=TRUE}
-test.min.cells <- 3
-test.min.genes <- 2
-
-test.genes.indices <- which(rowSums(test.zeb.counts.2) >= test.min.cells)
-test.cells.indices <- which(colSums(test.zeb.counts.2) >= test.min.genes)
-```
-
-# (Real)
-```{r include=TRUE}
-min.cells <- 300
-genes.indices <- which(rowSums(zeb.counts.2) >= min.cells)
-```
-
-```{r include=TRUE}
-min.genes <- 2000
-cells.indices <- which(colSums(zeb.counts.2) >= min.genes)
-```
-
-# No point continuing because there are just too many cells and genes for this to be tractable. 
-
-# (4a) Get their names. 
-```{r include=TRUE}
-test.genes.mat <- rownames(test.mat.2)[test.gene.indices.mat]
-test.cells.mat <- rownames(test.mat.2)[test.cells.indices.mat]
-
-```
-
-# (4b)
-```{r include=TRUE}
-test.genes <- rownames(test.zeb.counts.2)[test.genes.indices]
-test.cells <- rownames(test.zeb.counts.2)[test.cells.indices]
-
-```
-
-<!-- # We don't want this.  -->
-<!-- ```{r include=TRUE} -->
-<!-- test.filtered.mat.2 <- test.mat.2[rownames(test.mat.2) %in% test.genes.mat, ] -->
-<!-- test.filtered.mat.2 <- test.filtered.mat.2 %>% select(all_of(test.cells.indices.mat)) -->
-<!-- ``` -->
-
-# (5a) Filter original raw matrix based on these names/indices.
-```{r include=TRUE}
-test.filtered.mat <- test.mat[rownames(test.mat) %in% test.genes.mat, ]
-test.filtered.mat <- test.filtered.mat %>% select(all_of(test.cells.indices.mat))
-```
-
-# (5b)
-```{r include=TRUE}
-test.filtered <- test.zeb.counts[rownames(test.zeb.counts) %in% test.genes, ]
-test.filtered <- test.filtered %>% select(all_of(test.cells.indices))
-```
-
-
-# All genes test on Noto. Intractable on Vera.  
 ```{r include=TRUE}
 test_noto <- zeb_counts[, noto]
 test_not_noto <- zeb_counts[, !(colnames(zeb_counts) %in% noto)]
@@ -395,10 +260,12 @@ test_pair <- cbind(test_noto, test_not_noto)
 # test_edgeR <- edgeR_pipeline(test_pair, ncol(test_noto), ncol(test_not_noto)
 ```
 
+# Write out raw matrix of all Noto/Noto'.
 ```{r include=TRUE}
 write.csv(test_pair, "/home/pprakriti/Desktop/test_pair.csv")
 ```
 
+# This is just making sure that I wrote out the matrix correctly.
 ```{r include=TRUE}
 test_load <- read.table("/home/pprakriti/Desktop/test_pair.csv",
                         header = TRUE,
@@ -406,7 +273,7 @@ test_load <- read.table("/home/pprakriti/Desktop/test_pair.csv",
                         row.names = 1)
 ```
 
-# Small 
+# Take a subset of above (Small) 
 ```{r include=TRUE}
 small_test_pair <- test_pair[1:10000, 1:500]
 
@@ -424,17 +291,34 @@ small_test_load <- read.table("/home/pprakriti/Desktop/small_test_pair.csv",
 small_test_edgeR <- edgeR_pipeline(small_test_load, 250, 250)
 ```
 
-############################################################
-DUMPS
+"""
+8/10/20
 
-# Tried subsetting genes to just 1-1 orthos to see if it would run faster... no it didn't
-# Plus it makes no sense. 
+Let's compare the output of small_test_edgeR above with gencomp_small_test_edgeR_gencomp_output_true.csv
+-ran gencomp_small_test_edgeR.r, with rownames (zeb gene names)
+
+Note: Numbers are a little bit different because I'm using edgeR v.3.26.8
+      and v.3.28.1 in gen-comp2.
+      Thus, let me update the version in Vera.
+
+"""
 ```{r include=TRUE}
-one2one_zeb_counts <- as.data.frame(zeb_counts)
-one2one_zeb_counts <- subset(one2one_zeb_counts, rownames(one2one_zeb_counts) %in% one2one_zeb_genes)
-
-# one2one_zeb_counts$genes <- rownames(zeb_counts)
-# one2one_zeb_counts %>% filter(genes %in% one2one_zeb_genes)
+gencomp.file <- "/home/pprakriti/Desktop/gencomp_small_test_pair/gencomp_small_test_edgeR_gencomp_output_true.csv"
+gencomp.output <- read.table(gencomp.file,
+                             sep = ",",
+                             row.names = 1,
+                             header = TRUE,
+                             stringsAsFactors = FALSE)
 ```
+
+```{r include=TRUE}
+for(i in 1:length(zeb_cell_type_list)) {
+  CT_names <- names(zeb_cell_type_list)
+  CT_name <- CT_names[i]
+  num_cells <- length(zeb_cell_type_list[[i]])
+  cat("i = ", i, "CT = ", CT_name, "with ", num_cells, "\n\n")
+}
+```
+
 
 

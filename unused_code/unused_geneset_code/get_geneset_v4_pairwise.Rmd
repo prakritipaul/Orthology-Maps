@@ -4,7 +4,6 @@ output: html_document
 ---
 # TO DO: 
 #     1. Fix the dplyr stuff at the end.
-#     2. Get rid of cor, keep just the cor.test implementation.
 
 # Version for pairwise DEGs. 
 
@@ -20,7 +19,7 @@ library(ggplot2)
 
 # Gene List
 ```{r include=TRUE}
-one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
+one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/pre_gencomp_get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
 
 one_one_df <- read.table(one_one_dir,
                          sep = ",",
@@ -29,6 +28,15 @@ one_one_df <- read.table(one_one_dir,
 
 one2one_khid_list = one_one_df$V1
 one2one_zeb_genes = one_one_df$V2
+```
+
+# Import KHID -> Human Ortholog File
+```{r include=TRUE}
+khid_human_ortho_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/lifechanging_aniseed_files/ANISEED-Cirobu-GeneName-3bestBlastHitHuman.rnames"
+khid_human_ortho_df <- read.table(khid_human_ortho_dir,
+                                  sep = "\t",
+                                  stringsAsFactors = FALSE,
+                                  header = TRUE)
 ```
 
 """
@@ -90,6 +98,19 @@ v4_zeb_pairwise_degs_0 <- zeb_ans_list_0$unique_edgeR_degs
 ```{r include=TRUE}
 khid_pairwise <- v4_ciona_pairwise_degs
 zeb_gene_pairwise <- v4_zeb_pairwise_degs
+```
+
+# TROUBLESHOOT 
+# Testing "get_common_degs.py" pipeline.
+```{r include=TRUE}
+write.csv(x = khid_pairwise,
+          file = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/validating_get_common_degs/ciona_pw_logfc1_degs.csv",
+          row.names = FALSE)
+
+write.csv(x = zeb_gene_pairwise,
+          file = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/validating_get_common_degs/zeb_pw_logfc1_degs.csv",
+          row.names = FALSE)
+
 ```
 
 ##################################################
@@ -204,7 +225,7 @@ zeb_gsm_v4 <- make_gene_specificity_matrix(zeb_avexp_df_v4)
 
 ##############################################################
 
-### HERE IS WHERE YOU USE THE NEW MAKE_COR_DF FUNCTION
+# NEW MAKE_COR_DF FUNCTION
 
 ##############################################################
 
@@ -252,16 +273,6 @@ test_c_gsm <- ciona_gsm_v4
 test_z_gsm <- zeb_gsm_v4
 test_cor_test <- make_COR_TEST_df(test_c_gsm, test_z_gsm)
 
-```
-
-##############################################################
-
-### SKIP THIS HERE IS WHERE YOU USE THE NEW MAKE_COR_DF FUNCTION
-
-### INITAL/REAL TEST WITHOUT P-VALS
-
-```{r include=TRUE}
-cor_df_v4 <- make_cor_df(ciona_gsm_v4, zeb_gsm_v4)
 ```
 
 ##############################################################

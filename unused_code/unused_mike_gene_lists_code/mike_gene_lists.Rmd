@@ -4,8 +4,10 @@ output: html_document
 ---
 
 # General Script to generate lists of interest.
-# 7/30/20: 
-# 1-1 DEGs in common and not between Zeb heart_51_56 and Ciona endo, heart, (and mes). 
+# 7/30/20
+
+# 1-1 DEGs in common and not between Zeb heart_51_56 (24 hpf) and Ciona endo, heart, (and mes) (Larva). And other exploratory analyses.
+# Also uses human orthologs.  
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -17,6 +19,18 @@ library(dplyr)
 library(ggplot2)
 ```
 
+```{r include=TRUE}
+one_one_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/one_to_one_khid_zeb_gene_dict.csv" 
+
+one_one_df <- read.table(one_one_dir,
+                         sep = ",",
+                         header = FALSE,
+                         stringsAsFactors = FALSE)
+
+one2one_khid_list = one_one_df$V1
+one2one_zeb_genes = one_one_df$V2
+```
+
 # Import KHID -> Human Ortholog File
 ```{r include=TRUE}
 khid_human_ortho_dir <- "/home/pprakriti/Desktop/orthology_maps_temps/ANISEED-Cirobu-GeneName-3bestBlastHitHuman.rnames"
@@ -25,6 +39,30 @@ khid_human_ortho_df <- read.table(khid_human_ortho_dir,
                                   stringsAsFactors = FALSE,
                                   header = TRUE)
 ```
+
+# Ciona TF list
+```{r include=TRUE}
+ciona_tf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/ciona_regulatory_regions/ciona_TFs.csv"
+
+ciona_tf_df <- read.table(ciona_tf_dir,
+                          sep = ",",
+                          stringsAsFactors = FALSE,
+                          header = TRUE)
+```
+
+```{r include=TRUE}
+# 1863 -> 964 
+ciona_tfs <- ciona_tf_df$KH.model.ID
+ciona_tfs <- ciona_tfs[!ciona_tfs == ""]
+ciona_tfs <- paste("KH2012:", ciona_tfs, sep = "")
+
+# 258
+one2one_logic <- ciona_tfs %in% one2one_khid_list
+one2one2_ciona_tfs <- ciona_tfs[one2one_logic]
+```
+############################################################
+
+# 7/30/20
 
 # Get all DEGs (logFC > 1) for Zeb heart_51_56.
 ```{r include=TRUE}
@@ -133,6 +171,39 @@ write.table(x = heart_human_df,
             row.names = FALSE)
 
 ```
+
+# 8/6/20
+# Get the khids and zeb_genes for each of the gene lists.
+```{r include=TRUE}
+temp_only_endo <- one_one_df %>% filter(V1 %in% endo_khids)
+temp_only_heart <- one_one_df %>% filter(V1 %in% heart_khids)
+temp_common <- one_one_df %>% filter(V1 %in% common_khids)
+```
+
+```{r include=TRUE}
+write.table(x = temp_only_endo,
+            file = "endo_orthologs.csv",
+            sep = ",",
+            row.names = FALSE)
+
+write.table(x = temp_only_heart,
+            file = "heart_orthologs.csv",
+            sep = ",",
+            row.names = FALSE)
+
+write.table(x = temp_common,
+            file = "common_orthologs.csv",
+            sep = ",",
+            row.names = FALSE)
+```
+
+
+
+
+
+
+
+
 """
 Negatively Correlated Tissues
 """
@@ -173,4 +244,127 @@ mike_ciona_noto_one2one_indices <- which(one2one_khid_list %in% mike_ciona_noto_
 
 ```
 
+###########################################################
 
+# 7/31/20 
+
+# Does ciona mesp/any zeb mesp show up with logFC > 1?
+# No for all. 
+```{r include=TRUE}
+c_mesp = "KH2012:KH.C3.100"
+c_mesp %in% mike_ciona_heart_degs
+
+z_mesp = c("mespaa", "mespba", "mespbab", "mespbb", "msgn1")
+z_mesp %in% mike_zeb_heart_degs
+```
+
+################
+
+# Let's see if they show up with logFC > 0.
+
+################
+
+# Get all DEGs (logFC > 1) for Zeb heart_51_56.
+```{r include=TRUE}
+mike_zeb_heart_degs_0 <- c(rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_noto),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_muscles),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_pec_fin_bud),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_panc_prim_endo),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_meso),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_leuko),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_diff_neus),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_epi_1),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_epi_2),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_heart_52),
+                         rownames(zeb_ans_list_0$edgeR_res_list$heart_51_56_tail_spinal_cord))
+
+# 9296 vs. 1871 
+mike_zeb_heart_degs_0 <- unique(mike_zeb_heart_degs_0)
+
+# 1560 vs. 313 
+mike_zeb_heart_one2one_indices_0 <- which(one2one_zeb_genes %in% mike_zeb_heart_degs_0)
+```
+
+# Ciona Endo, Heart, Meso DEGs.
+```{r include=TRUE}
+mike_ciona_endo_degs_0 <- c(rownames(ciona_ans_list_0$edgeR_res_list$endo_cns),
+                          rownames(ciona_ans_list_0$edgeR_res_list$endo_noto),
+                          rownames(ciona_ans_list_0$edgeR_res_list$endo_heart),
+                          rownames(ciona_ans_list_0$edgeR_res_list$endo_mus),
+                          rownames(ciona_ans_list_0$edgeR_res_list$endo_mes),
+                          rownames(ciona_ans_list_0$edgeR_res_list$endo_epi))
+
+mike_ciona_heart_degs_0 <- c(rownames(ciona_ans_list_0$edgeR_res_list$heart_noto),
+                           rownames(ciona_ans_list_0$edgeR_res_list$heart_mus),
+                           rownames(ciona_ans_list_0$edgeR_res_list$heart_mes),
+                           rownames(ciona_ans_list_0$edgeR_res_list$heart_epi),
+                           rownames(ciona_ans_list_0$edgeR_res_list$heart_endo),
+                           rownames(ciona_ans_list_0$edgeR_res_list$heart_cns))
+
+mike_ciona_mes_degs_0 <- c(rownames(ciona_ans_list_0$edgeR_res_list$mes_noto),
+                         rownames(ciona_ans_list_0$edgeR_res_list$mes_heart),
+                         rownames(ciona_ans_list_0$edgeR_res_list$mes_mus),
+                         rownames(ciona_ans_list_0$edgeR_res_list$mes_epi),
+                         rownames(ciona_ans_list_0$edgeR_res_list$mes_endo),
+                         rownames(ciona_ans_list_0$edgeR_res_list$mes_cns))
+
+# 10105 -> 2622 
+mike_ciona_endo_degs_0 <- unique(mike_ciona_endo_degs_0)
+mike_ciona_endo_one2one_indices_0 <- which(one2one_khid_list %in% mike_ciona_endo_degs_0)
+# 6407 -> 2004 
+mike_ciona_heart_degs_0 <- unique(mike_ciona_heart_degs_0)
+mike_ciona_heart_one2one_indices_0 <- which(one2one_khid_list %in% mike_ciona_heart_degs_0)
+# 4875 -> 1374
+mike_ciona_mes_degs_0 <- unique(mike_ciona_mes_degs_0)
+mike_ciona_mes_one2one_indices_0 <- which(one2one_khid_list %in% mike_ciona_mes_degs_0)
+```
+
+# What pairwise indices are in common?
+```{r include=TRUE}
+# 1424
+cz_endo_heart_0 <- intersect(mike_ciona_endo_one2one_indices_0, mike_zeb_heart_one2one_indices_0)
+# 1188 
+cz_heart_heart_0 <- intersect(mike_ciona_heart_one2one_indices_0, mike_zeb_heart_one2one_indices_0)
+# 890
+cz_mes_heart_0 <- intersect(mike_ciona_mes_one2one_indices_0, mike_zeb_heart_one2one_indices_0)
+```
+
+# What indices are shared among Ciona Endo and Heart?
+```{r include=TRUE}
+# 1159/1424, 1188 (endo_heart, heart_heart)
+mike_common_indices_0 <- intersect(cz_endo_heart_0, cz_heart_heart_0)
+
+# 265 
+mike_only_endo_0 <- setdiff(cz_endo_heart_0, cz_heart_heart_0)
+# 29 
+mike_only_heart_0 <- setdiff(cz_heart_heart_0, cz_endo_heart_0)
+```
+
+# Gene Lists.
+```{r include=TRUE}
+endo_khids_0 <- one2one_khid_list[mike_only_endo_0]
+endo_human_df_0 <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% endo_khids_0, ]
+endo_human_df
+# Bra -> ETV1 (endo). I couldn't find bra here... timing thing? 
+
+heart_khids_0 <- one2one_khid_list[mike_only_heart_0]
+heart_human_df_0 <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% heart_khids_0, ]
+heart_human_df_0
+
+common_khids_0 <- one2one_khid_list[mike_common_indices_0]
+common_human_df_0 <- khid_human_ortho_df[khid_human_ortho_df$Gene.ID %in% common_khids_0, ]
+common_human_df_0
+```
+```{r include=TRUE}
+# Filtered.
+c_mesp = "KH2012:KH.C3.100"
+c_mesp %in% mike_ciona_heart_degs_0
+
+# Unfiltered: All but mespbab.
+z_mesp = c("mespaa", "mespba", "mespbab", "mespbb", "msgn1")
+z_mesp %in% mike_zeb_heart_degs_0
+```
+```{r include=TRUE}
+FeaturePlot(zeb_integrated_50,
+            features = z_mesp)
+```

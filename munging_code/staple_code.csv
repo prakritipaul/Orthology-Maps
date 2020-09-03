@@ -15,8 +15,8 @@ PICKLE_OUT.close()
 (3) How to read contents of csv file (Csv reader):
 
 ciona_ens_dir
-with open(ciona_ens_dir) as csv_file:
-	csv_reader = csv.reader(csv_file, delimiter="\t")
+with open(ciona_ens_dir) as csvfile:
+	csvreader = csv.reader(csvfile, delimiter="\t")
 
 (4) How to write out a list of strings into a csv file
 -first turn list of strings into a list of lists

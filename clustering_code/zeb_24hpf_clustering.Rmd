@@ -494,7 +494,8 @@ Let us identify cell types/tissues using zeb_integrated_50
 """
 
 ```{r include=TRUE}
-zeb_features <- pec_fin_bud_20_degs[1:9]
+zeb_features <- c("slit1b", "emilin3a", "ntd5", "spon1b", "col2a1a", "loxl5b", "shha", "hapln1a")
+  # pec_fin_bud_20_degs[1:9]
 
 FeaturePlot(object = zeb_integrated_50,
             features = zeb_features,
