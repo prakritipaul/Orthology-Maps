@@ -1,4 +1,13 @@
 ---
+title: "one2many_orthology_map_generator"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
 title: "orthology_map_heatmap_generator"
 output: html_document
 ---
@@ -19,10 +28,6 @@ output: html_document
 # TO DO:
 #     (1) Clean up Nitta df
 #     (2) Sketchy Kai Gene Lists (getting correct zeb genes)
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ```{r include=FALSE}
 library(Seurat)
@@ -46,122 +51,226 @@ library(plotly)
   (3) Make ciona_avexp_df_v4, zeb_avexp_df_v4
 
 """
-## CHANGE ##
+# Read in "one2one_many_dict.csv"
 ```{r include=TRUE}
-# Not: These files correspond to gene lists generated from different logFC values.
-
-larva.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_0/one2one_24hpf_larva_khids_logFC0.csv"
-
-zeb.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_0/one2one_larva_24hpf_genes_logFC0.csv"
-
-larva.khids.df <- read.table(larva.dir,
-                         sep = ",",
-                         header = FALSE,
-                         stringsAsFactors = FALSE)
-
-zeb.genes.df <- read.table(zeb.dir,
-                         sep = ",",
-                         header = FALSE,
-                         stringsAsFactors = FALSE)
-
-# These are 1-1 DEG Orthologs. 
-larva.khids <- larva.khids.df$V1
-zeb.genes <- zeb.genes.df$V1
+filtered.one2one.many.dict.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_many_larva_24hpf/filtered_one2one_many_export_dict_20_09_07.csv"
+# 3140
+one2one.many.dict <- read.table(filtered.one2one.many.dict.dir,
+                                sep = ",",
+                                header = FALSE,
+                                stringsAsFactors = FALSE)
 ```
 
-# Gene lists from above.
+
+# one2one.many.dict df -> one2one.many.list = {khid : ['aimp1a' 'aimp1b']} 
+# Note: All lists are of length 1.
 ```{r include=TRUE}
-qualified_ciona_khids <- larva.khids
-qualified_zeb_genes <- zeb.genes
+# 3140
+one2one.many.list <- list()
+num.khids <- dim(one2one.many.dict)[1]
+
+for (i in 1:num.khids) {
+  khid <- one2one.many.dict$V1[i]
+  
+  zeb.genes <- one2one.many.dict$V2[i]
+  zeb.genes <- strsplit(zeb.genes, " ")
+  one2one.many.list[[khid]] <- zeb.genes
+}
 ```
 
-## CHANGE: Specify Zeb Cell Type List ##
+# Ciona genes of interest- length of column should be the number of these genes.
 ```{r include=TRUE}
-# Note: We will change zeb_cell_type_list_v4 based on All/No Neural
-#       ciona_cell_type_list never changes.
-
-# ciona_cell_type_list
-zeb_cell_type_list_v4 <- zeb_cell_type_list
+# 3140
+qualified.ciona.khids <- names(one2one.many.list)
 ```
 
-# Do for Ciona Larva.
+# Make precursory Average Expression Matrix (ciona.df).
 ```{r include=TRUE}
-ciona_dummy_col <- rep(0, length(qualified_ciona_khids))
+# Each row of a column should be a gene name. 
+ciona.dummy.col <- rep(0, length(qualified.ciona.khids))
+ciona.df <- data.frame("ciona.dummy" = ciona.dummy.col)
 ```
 
+# Make Ciona Average Expression Matrix.
 ```{r include=TRUE}
-ciona_df <- data.frame(ciona_dummy=ciona_dummy_col)
-
+# For each Ciona CT
 for (i in 1:length(ciona_cell_type_list)) {
-  cat("i = ", i, "\n")
-  ciona_cells <- ciona_cell_type_list[[i]]
+  # Get its name. 
+  ciona.CT <- names(ciona_cell_type_list)[i]
+  cat("ciona CT = ", ciona.CT, "\n\n")
   
-  # Get gene exp values for all cells in a CT.
-  ciona_data_pre <- ciona_data[qualified_ciona_khids, ciona_cells]
-  ciona_data_df <- as.data.frame(ciona_data_pre)
+  # All of its cells.
+  ciona.cells <- ciona_cell_type_list[[i]]
   
-  # Get av exp for each gene for all CTs.
-  ciona_row <- rowMeans(ciona_data_df)
-  ciona_df <- cbind(ciona_df, ciona_row)
+  # Subset the matrix based on cells. 
+  ciona.data.pre <- ciona_data[qualified.ciona.khids, ciona.cells]
+  ciona.data.df <- as.data.frame(ciona.data.pre)
+  
+  # Get the average expression of each qualified.ciona.khid for the CT.
+  ciona.row <- rowMeans(ciona.data.df)
+  # Add to ciona.df. In the end, you should have 7 cols, each for a CT.
+  ciona.df <- cbind(ciona.df, ciona.row)
+}
+# Get rid of the dummy column.
+ciona.df <- subset(ciona.df, select = -(ciona.dummy))
+
+# Each column is a CT.
+ciona.colnames <- names(ciona_cell_type_list)
+colnames(ciona.df) <- ciona.colnames
+```
+
+# Ciona Average Expression Matrix.
+```{r include=TRUE}
+ciona.avexp.df <- ciona.df
+```
+
+############### START DO NOT TOUCH!!!! #################
+
+# Let us now make zeb.df. 
+# num_col = # CTs (43); num_rows = # of qualified.ciona.khids.
+```{r include=TRUE}
+# length(zeb_cell_type_list)- keep below
+num.zeb.df.cols <- length(zeb_cell_type_list)
+# Because this is the number of Ciona khids. length(qualified.ciona.khids)- change below
+num.zeb.df.rows <- length(qualified.ciona.khids)
+# 3140 x 43 
+zeb.df <- data.frame(matrix(, nrow=num.zeb.df.rows, ncol=num.zeb.df.cols))
+```
+
+# Get colnames that correspond to various Zeb CTs.
+```{r include=TRUE}
+zeb.df.colnames <- names(zeb_cell_type_list)
+colnames(zeb.df) <- zeb.df.colnames
+```
+
+# Get rownames that represent mapping.
+```{r include=TRUE}
+# I discovered that there were 2 zeb_genes (ube2c_2 and rpl37_2) that mapped to 2 different khids that were 
+# labelled as 1-1. Their names are munged here.
+
+zeb.df.rownames <- c()
+# seen.zeb.rownames <- c()
+
+for (i in 1:length(one2one.many.list)) {
+  khid <- names(one2one.many.list)[i]
+  cat("khid = ", khid, "\n\n")
+  
+  zeb.names <- one2one.many.list[[i]][[1]]
+  # cat(zeb.names, "\n\n")
+  
+  zeb.name.string <- paste(zeb.names, collapse = "_")
+  # cat("zeb name string = ", zeb.name.string, "\n\n")
+  
+  if (zeb.name.string %in% zeb.df.rownames) {
+    # cat("PROBLEM zeb name string = ", zeb.name.string, "\n\n")
+    
+    # Add _2 to seen.zeb.rownames to avoid redundant rowname conflicts. 
+    zeb.name.string <- paste(zeb.name.string, "2", sep = "_")
+    # seen.zeb.rownames <- c(seen.zeb.rownames, zeb.name.string)
+
+  }
+  zeb.df.rownames <- c(zeb.df.rownames, zeb.name.string)
 }
 
-# Remove ciona_dummy column.
-ciona_df <- subset(ciona_df, select=-(ciona_dummy))
-
-# Munge.
-ciona_colnames <- names(ciona_cell_type_list)
-colnames(ciona_df) <- ciona_colnames
+# Modify zeb.df with these rownames. 
+rownames(zeb.df) <- zeb.df.rownames
 ```
 
-# The Average Expression Dataframe.
+# Make average expression dataframe.
 ```{r include=TRUE}
-ciona_avexp_df_v4 <- ciona_df
-```
-
-# Do for Zeb 24hpf. 
-```{r include=TRUE}
-zeb_dummy_col <- rep(0, length(qualified_zeb_genes))
-```
-
-```{r include=TRUE}
-zeb_df <- data.frame(zeb_dummy=zeb_dummy_col)
-
-for (i in 1:length(zeb_cell_type_list_v4)) {
-  cat("i = ", i, "\n")
-
-  zeb_cells <- zeb_cell_type_list_v4[[i]]
+# For each Zeb CT
+for (i in 1:length(zeb_cell_type_list)) {
+  zeb.CT.name <- names(zeb_cell_type_list)[i]
+  # Get its cells. 
+  zeb.cells <- zeb_cell_type_list[[i]]
+  zeb.length <- length(zeb.cells)
+  cat("Zeb CT = ", zeb.CT.name, "\n", zeb.length)
   
-  # Get gene exp values for all cells in a CT.
-  zeb_data_pre <- zeb_data[qualified_zeb_genes, zeb_cells]
-  zeb_data_df <- as.data.frame(zeb_data_pre)
-  
-  # Get av exp for each gene for all CTs.
-  zeb_row <- rowMeans(zeb_data_df)
-  zeb_df <- cbind(zeb_df, zeb_row)
+  # Get 1-1/1-many zeb genes.
+  for (j in 1:length(one2one.many.list)) {
+    cat("i = ", i, "j = ", j, "\n\n")
+    one.many.zeb.genes <- one2one.many.list[[j]][[1]]
+    
+    # Subset Zeb Data based on these genes.
+    zeb.sub <- zeb_data[one.many.zeb.genes, zeb.cells]
+    
+    # Get Average Expression.
+    zeb.av <- sum(zeb.sub)/zeb.length
+    # Add to correct entry. 
+    zeb.df[j, i] <- zeb.av
+  }
 }
-
-# Remove zeb_dummy column.
-zeb_df <- subset(zeb_df, select=-(zeb_dummy))
-
-# Munge. 
-zeb_colnames <- names(zeb_cell_type_list_v4)
-colnames(zeb_df) <- zeb_colnames
 ```
 
-# The Average Expression Dataframe.
+# Zeb Average Expression Matrix
 ```{r include=TRUE}
-zeb_avexp_df_v4 <- zeb_df
+zeb.avexp.df <- zeb.df
 ```
+
+############### END DO NOT TOUCH!!!! #################
+
+# Only heart_52 is f*** up. 
+# So I'm just going to do the hacky thing of calculating it separately
+# and then modifying zeb.avexp.df 
+
+####################### START FIX HEART 52! ######################
+
+```{r include=TRUE}
+fixed.heart.zeb.df.dummy.col <- rep(0, length(qualified.ciona.khids))
+fixed.heart.zeb.df <- data.frame("heart_52" = fixed.heart.zeb.df.dummy.col)
+
+fixed.heart.zeb.cells <- zeb_cell_type_list$heart_52
+fixed.heart.length <- length(fixed.heart.zeb.cells)
+
+# For each KHID
+for (j in 1:length(one2one.many.list)) {
+  cat("i = ", i, "j = ", j, "\n\n")
+
+# Get its zeb orthologs. 
+  fixed.heart.one.many.zeb.genes <- one2one.many.list[[j]][[1]]
+
+# Subset Zeb Data based on these zeb orthologs.
+fixed.heart.zeb.sub <- zeb_data[fixed.heart.one.many.zeb.genes, fixed.heart.zeb.cells]
+# Get Average Expression.
+fixed.heart.zeb.av <- sum(fixed.heart.zeb.sub)/fixed.heart.length
+# Add to correct entry. 
+fixed.heart.zeb.df[j, 1] <- fixed.heart.zeb.av
+}
+```
+
+# Get the Average Expression values for heart_52 (fixed.heart.zeb.column)
+```{r include=TRUE}
+# Correct! 
+fixed.heart.zeb.df
+# We want its values.
+fixed.heart.zeb.column <- fixed.heart.zeb.df$heart_52
+```
+
+# Replace heart_52 column in zeb.avexp.df
+```{r include=TRUE}
+zeb.avexp.df$heart_52 <- fixed.heart.zeb.column
+```
+
+####################### END FIX HEART 52! ######################
 
 """
 (4) Make the GSM Dataframes, ciona/zeb_gsm_v4
 """
 ```{r include=FALSE}
-ciona_gsm_v4 <- make_gene_specificity_matrix(ciona_avexp_df_v4)
-rownames(ciona_gsm_v4) <- rownames(ciona_avexp_df_v4)
+ciona.gsm <- make_gene_specificity_matrix(ciona.avexp.df)
+rownames(ciona.gsm) <- rownames(ciona.avexp.df)
 
-zeb_gsm_v4 <- make_gene_specificity_matrix(zeb_avexp_df_v4)
-rownames(zeb_gsm_v4) <- rownames(zeb_avexp_df_v4)
+zeb.gsm <- make_gene_specificity_matrix(zeb.avexp.df)
+rownames(zeb.gsm) <- rownames(zeb.avexp.df)
+```
+
+# Can only 1-many genes recapitulate these heatmaps?
+```{r include=TRUE}
+many.zeb.rows <- rownames(zeb.gsm)
+many.zeb.grep <- grepl("_", many.zeb.rows)
+
+many.zeb.gsm <- zeb.gsm[many.zeb.grep, ]
+many.ciona.gsm <- ciona.gsm[many.zeb.grep, ]
 ```
 
 ### Pipeline 1: Adjusted p_vals, Visualizes significant p_vals.
@@ -170,8 +279,8 @@ rownames(zeb_gsm_v4) <- rownames(zeb_avexp_df_v4)
 (5.1) Use corr.test to make Correlation and P-Value Matrices.
 """
 ```{r include=TRUE}
-corR.output <- corr.test(x= ciona_gsm_v4,
-                         y = zeb_gsm_v4,
+corR.output <- corr.test(x= ciona.gsm,
+                         y = zeb.gsm,
                          method = "spearman",
                          adjust = "fdr")
 ```
@@ -188,13 +297,15 @@ corR.pval.mat <- corR.output$p
 # Parameters.
 ```{r include=TRUE}
 # Corr legend range. 
+# min(corR.mat)
 min.index <- min(corR.mat)
+# max(corR.mat)
 max.index <- max(corR.mat)
 leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
-your.title <- "Larva CTs vs. Zeb CTs, logFC > 0"
+your.title <- "Only 1-Many Larva CTs vs. Zeb CTs, logFC > 0"
 your.xlab <- "Ciona Larva"
 your.ylab <- "Zeb 24hpf"
 your.fill <- "Corr"
@@ -219,8 +330,9 @@ p + scale_fill_gradient2(limit = limits,
                  axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
                  
   )
-   
 ```
+
+
 """
 (5.3) (a) Get # Significant Correlations. 
       (b) Get Significance between zeb_CT and ciona_CT
@@ -228,30 +340,10 @@ p + scale_fill_gradient2(limit = limits,
 ```{r include=TRUE}
 num.sig <- sum(corR.pval.mat < 0.05)
 num.sig
-```
 
-```{r include=TRUE}
-# CHANGE
-ciona.index <- 3 
-zeb.index <- 4 
-
-for (i in 1:ciona.index) {
-  for (j in 1:zeb.index) {
-    ciona.CT.list <- c("noto", "mus", "heart" )
-    zeb.CT.list <- c("noto", "muscles", "heart_52", "heart_51_56")
-    
-    ciona.CT <- ciona.CT.list[i]
-    zeb.CT <- zeb.CT.list[j]
-    
-    cat("ciona CT = ", ciona.CT, "\n", "zeb CT= ", zeb.CT, "\n")
-    p.val <- corR.pval.mat[ciona.CT, zeb.CT]
-    p.val <- signif(p.val, 3)
-    cat(p.val, "\n")
-    correlation <- corR.mat[ciona.CT, zeb.CT]
-    correlation <- signif(correlation, 3)
-    cat(correlation, "\n\n")
-  } 
-}
+num.CTs <- ncol(ciona.gsm)*ncol(zeb.gsm)
+perc.sig <- num.sig/num.CTs*100
+perc.sig
 ```
 
 ##### Part 2: TF SMG ANALYSES #####
@@ -565,98 +657,167 @@ my.human.khids
 
 ### Unused below
 
-### (Old) Pipeline 2: Unadjusted p_vals, Does not visualize significant p_vals. 
-# Uses stats::cor.test
-"""
-(5.1) Make cor_df using make_core_df function 
-"""
+# test.one2one.many.list
+```{r include=TRUE}
+test.one2one.many.list <- list("A" = list(c("C")),
+                               "B" = list(c("D", "E")))
+num.khids
+```
+
+# Test list of cell names
+```{r include=TRUE}
+# ~ciona/zeb_cell_type_list
+test.ciona_cell_type_list <- list("N" = c("n1", "n2", "n3"),
+                                  "P" = c("p1", "p2", "p3", "p4"))
+
+test.zeb.cell.type.list <- list("J" = c("j1", "j2", "j3"),
+                                "K" = c("k1", "k2"))
+```
+
+# Test gene x cells matrix
+```{r include=TRUE}
+# ~ciona/zeb_data (full raw counts).
+# A -> C
+# B -> D, E
+test.ciona_data <- data.frame("n1" = c(0, 7),
+                         "n2" = c(1, 8),
+                         "n3" = c(2, 9),
+                         "p1" = c(3, 10),
+                         "p2" = c(4, 11),
+                         "p3" = c(5, 12),
+                         "p4" = c(6, 13))
+rownames(test.ciona_data) <- c("A", "B")
+
+test.zeb.data <- data.frame("j1" = c(0, 5, 10),
+                       "j2" = c(1, 6, 11),
+                       "j3" = c(2, 7, 12),
+                       "k1" = c(3, 8, 13),
+                       "k2" = c(4, 9, 14))
+rownames(test.zeb.data) <- c("C", "D", "E")
+```
+
+# Make dummy df whose length is that of the number of ciona genes
+```{r include=TRUE}
+test.qualified.ciona.khids <- names(test.one2one.many.list)
+
+test.ciona.dummy.col <- rep(0, length(test.qualified.ciona.khids))
+test.ciona.df <- data.frame("test.ciona.dummy" = test.ciona.dummy.col)
+```
+
+# Make Ciona Average Expression Matrix
+```{r include=TRUE}
+
+for (i in 1:length(test.ciona_cell_type_list)) {
+  test.ciona.CT <- test.qualified.ciona.khids[i]
+  cat("test ciona CT = ", test.ciona.CT, "\n\n")
+  test.ciona.cells <- test.ciona_cell_type_list[[i]]
+  
+  test.ciona_data.pre <- test.ciona_data[test.qualified.ciona.khids, test.ciona.cells]
+  test.ciona_data.df <- as.data.frame(test.ciona_data.pre)
+  
+  test.ciona.row <- rowMeans(test.ciona_data.df)
+  test.ciona.df <- cbind(test.ciona.df, test.ciona.row)
+}
+
+test.ciona.df <- subset(test.ciona.df, select=-(test.ciona.dummy))
+
+test.ciona.colnames <- names(test.ciona_cell_type_list)
+colnames(test.ciona.df) <- test.ciona.colnames
+
+test.ciona.avexp.df <- test.ciona.df
+```
 
 ```{r include=TRUE}
-make_cor_df <- function(ciona_gsm, zeb_gsm) {
-  # Given two gene specificity matrices, make a dataframe with 4 columns: 2 with CT names,
-  # p-value (NOT ADJUSTED) and rho (correlation coefficient).
-  # 
-  # Args:
-  #   ciona_gsm, zeb_gsm: Self-explanatory.
-  #
-  # Returns: Dataframe given above description.
-  cz_cor_df <- data.frame(ciona_CTs = 0,
-                             zeb_CTs = 0,
-                             p_val = 0,
-                             rho = 0)
-  
-  for (i in 1:ncol(ciona_gsm)) {
-    for (j in 1:ncol(zeb_gsm)) {
-      # CT expression vectors 
-      ciona_CT_col <- ciona_gsm[, i]
-      zeb_CT_col <- zeb_gsm[, j]
-      # CT name
-      ciona_CT <- colnames(ciona_gsm)[i]
-      zeb_CT <- colnames(zeb_gsm)[j]
-      
-      cat("i= ", i, "j= ", j, "ciona_CT= ", ciona_CT, "zeb_CT= ", zeb_CT, "\n")
-      cz_COR_TEST_res <- cor.test(ciona_CT_col, zeb_CT_col, method = "spearman", adju)
-      cz_p_val <- cz_COR_TEST_res$p.value
-      cz_rho <- cz_COR_TEST_res$estimate
-      
-      cz_row <- c(ciona_CT, zeb_CT, cz_p_val, cz_rho)
-      cat("row = ", cz_row)
-      
-      cz_cor_df <- rbind(cz_cor_df, cz_row)
-    }
+test.num.zeb.df.cols <- length(test.zeb.cell.type.list)
+# Because this is the number of Ciona khids.
+test.num.zeb.df.rows <- length(test.one2one.many.list)
+
+test.zeb.df <- data.frame(matrix(, nrow=test.num.zeb.df.rows, ncol=test.num.zeb.df.cols))
+```
+
+# Get colnames that correspond to various Zeb CTs and rownames that represent mapping
+```{r include=TRUE}
+test.zeb.df.colnames <- names(test.zeb.cell.type.list) 
+
+test.zeb.df.rownames <- c()
+for (i in 1:length(test.one2one.many.list)) {
+  test.zeb.names <- test.one2one.many.list[[i]][[1]]
+  test.zeb.name.string <- paste(test.zeb.names, collapse="")
+  test.zeb.df.rownames <- c(test.zeb.df.rownames, test.zeb.name.string)
+}
+
+colnames(test.zeb.df) <- test.zeb.df.colnames
+rownames(test.zeb.df) <- test.zeb.df.rownames
+```
+
+```{r include=TRUE}
+# For each Zeb CT
+for (i in 1:length(test.zeb.cell.type.list)) {
+  test.zeb.CT.name <- names(test.zeb.cell.type.list)[i]
+  # Get its cells. 
+  test.zeb.cells <- test.zeb.cell.type.list[[i]]
+  test.length <- length(test.zeb.cells)
+  cat("Zeb CT = ", test.zeb.CT.name, test.length, "\n")
+  # Get 1-1/1-many zeb genes
+  for (j in 1:length(test.one2one.many.list)) {
+    test.one.many.zeb.genes <- test.one2one.many.list[[j]][[1]]
+    # Subset Zeb Data based on these genes.
+    test.zeb.sub <- test.zeb.data[test.one.many.zeb.genes, test.zeb.cells]
+    # Get Average Expression.
+    test.zeb.av <- sum(test.zeb.sub)/length(test.zeb.cells)
+    # Add to correct entry. 
+    test.zeb.df[j, i] <- test.zeb.av
   }
-  cz_cor_df <- cz_cor_df[-1, ]
-  return(cz_cor_df)
+}
+test.zeb.avexp.df <- test.zeb.df
+```
+
+# Getting the right format
+# Read in csv to make dataframe where rownames/1st column are KHIDs
+# Second column is string of many zeb genes
+```{r include=TRUE}
+test <- "a b 3"
+test.2 <- strsplit(test, " ")
+class(test.2)
+# 
+# test.2 <- test.2[[1]]
+# test.2
+# class(test.2)
+
+test.3 <- "d e"
+test.4 <- strsplit(test.3, " ")
+# test.4 <- test.4[[1]]
+
+test.row <- c(1, 2, 3)
+test.rownames <- c("A", "B", "C")
+
+test.df <- data.frame("A" = c(1, 2, 3))
+test.df[1, 1] <- test
+test.df[2, 1] <- test.3
+rownames(test.df) <- test.rownames
+
+# Read and munge in csv to make a dataframe with 2 columns 
+# col.1 <- khid, col.2 = zeb_gene_string e.g. "a b c" or "a"
+```
+
+# Df -> master.list = {key : list of strings}
+```{r include=TRUE}
+# {A: ["a", "b, "c"], B: ["d"]} where A/B=khid; "a", "b", "c" m_zeb_genes/"d" o_zeb_gene
+test.list <- list()
+
+num.rows <- dim(test.df)[1]
+for (i in 1:num.rows) {
+  key <- rownames(test.df)[i]
+  value <- test.df[i, 1]
+  value <- strsplit(value, " ")
+  test.list[[key]] <- value
 }
 ```
 
-# Make cor_df 
 ```{r include=TRUE}
-c_gsm <- ciona_gsm_v4
-z_gsm <- zeb_gsm_v4
-cor_df <- make_cor_df(c_gsm, z_gsm)
+for (i in 1:length(test.list)) {
+  value <- test.list[[i]][[1]]
+  cat(paste(value, collapse = ""))
+  cat("\n\n")
+}
 ```
-
-"""
-(6.1) Munge cor_df.
-"""
-```{r include=TRUE}
-cor_df_v4 <- cor_df
-cor_df_v4 <- cor_df_v4 %>% transform(rho = as.numeric(rho))
-cor_df_v4 <- cor_df_v4 %>% transform(p_val = as.numeric(p_val))
-```
-
-"""
-(7.1) Visualize! 
-"""
-```{r include=TRUE}
-# "RdYlBu", "PiYG"
-cor_df_v4_heatmap <- ggplot(data = cor_df_v4,
-                         aes(x=ciona_CTs, y=zeb_CTs, fill=rho)) +
-                         geom_tile() +
-                         scale_fill_distiller(palette = "RdBu")
-              
-cor_df_v4_heatmap
-```
-
-"""
-(8.1) Get significant p-values (unadjusted).
-"""
-
-```{r include=TRUE}
-sig_df <- subset(cor_df_v4, p_val < 0.05)
-```
-
-######
-
-# Past directories/files used. 
-```{r include=TRUE}
-# (1) All CTs, logFC>1 
-
-"/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_1/one2one_24hpf_larva_khids_logFC1.csv" 
-
-"/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_1/one2one_larva_24hpf_genes_logFC1.csv"
-
-
-```
-

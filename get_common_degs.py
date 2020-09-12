@@ -73,7 +73,7 @@ def get_unique_degs(files, logFC_val):
 # Global Variables.
 
 ## CHANGE ##
-LOGFC_VAL = -0.25
+LOGFC_VAL = 1
 DEG_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/"
 
 # Do for Ciona 
@@ -168,9 +168,9 @@ def out_csv(results_list, results_name, out_dir):
 ## CHANGE ## 
 
 # Do for Ciona 
-out_csv(LARVA_OUT, "one2one_24hpf_larva_khids_logFC025.csv", "/home/pprakriti/Desktop/")
-# Do for Zeb 
-out_csv(ZEB_OUT, "one2one_larva_24hpf_genes_logFC025.csv", "/home/pprakriti/Desktop/")
+# out_csv(LARVA_OUT, "all_larva_10.csv", "/home/pprakriti/Desktop/")
+# # Do for Zeb 
+# out_csv(ZEB_OUT, "all_24hpf_10.csv", "/home/pprakriti/Desktop/")
 
 # Print Results
 print("\n\n")

@@ -7,7 +7,7 @@
 import csv
 import pickle
 
-PICK_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/pickles/"
+PICK_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/all_ortholog_pickles/"
 ONE_TO_ONE_KHID_ZEB_GENE_DICT_DIR = PICK_DIR + "one_to_one_khid_zeb_gene_dict.pickle"
 
 PICKLE_1 = open(ONE_TO_ONE_KHID_ZEB_GENE_DICT_DIR, "rb")
@@ -19,6 +19,7 @@ khid_list = list()
 zeb_genes = list()
 
 for key, value in ONE_TO_ONE_KHID_ZEB_GENE_DICT.items():
+	print("working")
 	khid_list.append([key])
 	zeb_genes.append([value])
 
@@ -26,8 +27,8 @@ for key, value in ONE_TO_ONE_KHID_ZEB_GENE_DICT.items():
 Write out results into a .csv file
 """
 
-output_dir = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/get_geneset_attempts/v3/"
-output_file_name = "one_to_one_khid_zeb_gene_dict.csv"
+output_dir = "/home/pprakriti/Desktop/"
+output_file_name = "20_09_11_one_to_one_khid_zeb_gene_dict.csv"
 
 with open(output_dir+output_file_name, "w") as csvfile:
     csvwriter = csv.writer(csvfile)

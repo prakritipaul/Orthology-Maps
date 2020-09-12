@@ -1,0 +1,242 @@
+---
+title: "larva_24hpf_brainmap"
+output: html_document
+---
+
+# Uses Code from one2many_orthology_map_generator.Rmd
+# Subsets zeb.avexp.df for Neural Zeb CTs.
+# Uses Chen's brainmap CTs -> LTB2/larva Average Expression Vector.
+# Rest of pipeline is used for visualization.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(Matrix)
+library(ggcorrplot)
+library(psych)
+library(stringr)
+library(plotly)
+```
+
+"""
+
+(1) Make Neural Ciona Average Expression Matrix (ciona.neural.avexp.df).
+I need 2 data structures:
+
+(a) ciona.neural.CT.list
+(b) chen.cns.data
+
+"""
+## Make ciona.neural.cell.type.list.
+# Get all the data (will subset) and metadata (to get all CTs and their cells).
+```{r include=TRUE}
+chen.CNS.data <- CNS.Seurat.LTB2.lv@data
+chen.CNS.metadata <- CNS.Seurat.LTB2.lv@meta.data
+```
+
+# Get all chen CNS CTs.
+```{r include=TRUE}
+# 41
+chen.CNS.CTs <- unique(chen.CNS.metadata$newcluster.comb.del.anno)
+chen.CNS.CTs <- chen.CNS.CTs[-("NA" %in% chen.CNS.CTs)]
+chen.CNS.khids <- rownames(chen.CNS.data)
+```
+
+# Iterate through chen.CNS.CTs to make ciona.neural.CT.list.
+```{r include=TRUE}
+ciona.neural.CT.list <- list()
+
+for (chen.CNS.CT in chen.CNS.CTs) {
+  # Get dataframe relevant only to that CT. 
+  filtered.neural.df <- chen.CNS.metadata %>% filter(newcluster.comb.del.anno == chen.CNS.CT)
+  # Get CT's cells.
+  CT.cells <- rownames(filtered.neural.df)
+  # Update list.
+  ciona.neural.CT.list[[chen.CNS.CT]] <- CT.cells
+}
+```
+
+# Ciona genes of interest = 1-1 and 1-many Orthologs (names(one2one.many.list)).
+```{r include=TRUE}
+# 3140
+qualified.ciona.khids <- names(one2one.many.list)
+```
+
+# For some reason, 6 qualified.ciona.khids are not present in this Ciona gene model.
+```{r include=TRUE}
+not.in.CNS.indices <- which(qualified.ciona.khids %notin% chen.CNS.khids)
+
+not.qualified.ciona.khids <- qualified.ciona.khids[not.in.CNS.indices]
+
+not.qualified.ciona.khids
+```
+# Remove not.qualified.ciona.khids and Update qualified.ciona.khids.
+```{r include=TRUE}
+# 3134
+re.qualified <- qualified.ciona.khids[-not.in.CNS.indices]
+# Update qualified.ciona.khids
+qualified.ciona.khids <- re.qualified
+```
+
+# Make precursory Average Expression Matrix (ciona.neural.df).
+```{r include=TRUE}
+ciona.neural.dummy.col <- rep(0, length(qualified.ciona.khids))
+ciona.neural.df <- data.frame("ciona.dummy" = ciona.neural.dummy.col)
+```
+
+# Make Ciona Average Expression Matrix.
+```{r include=TRUE}
+# For each Neural Ciona CT
+for (i in 1:length(ciona.neural.CT.list)) {
+  # Get its name. 
+  ciona.CT <- names(ciona.neural.CT.list)[i]
+  cat("ciona CT = ", ciona.CT, "\n\n")
+  
+  # All of its cells.
+  ciona.cells <- ciona.neural.CT.list[[i]]
+  
+  # Subset the matrix based on cells. 
+  ciona.data.pre <- chen.CNS.data[qualified.ciona.khids, ciona.cells]
+  ciona.data.df <- as.data.frame(ciona.data.pre)
+  
+  # Get the average expression of each qualified.ciona.khid for the CT.
+  ciona.row <- rowMeans(ciona.data.df)
+  # Add to ciona.neural.df. In the end, you should have 7 cols, each for a CT.
+  ciona.neural.df <- cbind(ciona.neural.df, ciona.row)
+}
+# Get rid of the dummy column.
+ciona.neural.df <- subset(ciona.neural.df, select = -(ciona.dummy))
+
+# Each column is a CT.
+ciona.colnames <- names(ciona.neural.CT.list)
+colnames(ciona.neural.df) <- ciona.colnames
+```
+# Ciona Average Expression Matrix.
+```{r include=TRUE}
+# 3134 x 41
+ciona.neural.avexp.df <- ciona.neural.df
+```
+
+"""
+(2) Make Neural Zeb Average Expression Matrix.
+
+Remove zeb_genes that correspond to not.qualified.ciona.khids.
+"""
+# Zeb Neural CTs and corresponding Cell Type List.
+```{r include=TRUE}
+zeb.neural.CTs <- c(cell_type_flags_2, cell_type_flags_3, "lens", "optic_cup", "rpe", "otic_plac", "tail_spinal_cord", "tail_PSM")
+
+zeb.neural.CT.list <- zeb_cell_type_list[zeb.neural.CTs]
+```
+
+# Get subset of Zeb Average Expression Matrix for only Zeb Neural CTs and
+# update by removing zeb_genes that correspond to not.qualified.ciona.khids.
+# Use: not.in.CNS.indices.
+```{r include=TRUE}
+# 3134 x 25 
+zeb.neural.avexp.df <- zeb.avexp.df[-not.in.CNS.indices ,zeb.neural.CTs]
+```
+
+"""
+
+Perform the rest of the pipeline.
+
+"""
+"""
+(4) Make the GSM Dataframes, ciona/zeb.gsm 
+    using ciona/zeb.neural.avexp.df 
+"""
+```{r include=FALSE}
+ciona.gsm <- make_gene_specificity_matrix(ciona.neural.avexp.df)
+rownames(ciona.gsm) <- rownames(ciona.neural.avexp.df)
+
+zeb.gsm <- make_gene_specificity_matrix(zeb.neural.avexp.df)
+rownames(zeb.gsm) <- rownames(zeb.neural.avexp.df)
+```
+
+# Can only 1-many genes recapitulate these heatmaps?
+```{r include=TRUE}
+many.zeb.rows <- rownames(zeb.gsm)
+many.zeb.grep <- grepl("_", many.zeb.rows)
+
+many.zeb.gsm <- zeb.gsm[many.zeb.grep, ]
+many.ciona.gsm <- ciona.gsm[many.zeb.grep, ]
+```
+
+### Pipeline 1: Adjusted p_vals, Visualizes significant p_vals.
+# Uses psych::corr.test
+"""
+(5.1) Use corr.test to make Correlation and P-Value Matrices.
+"""
+```{r include=TRUE}
+corR.output <- corr.test(x= ciona.gsm,
+                         y = zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
+corR.mat <- corR.output$r
+corR.pval.mat <- corR.output$p 
+```
+
+"""
+(5.2) Visualize.
+"""
+
+# Parameters.
+```{r include=TRUE}
+# Corr legend range. 
+# min(corR.mat)
+min.index <- min(corR.mat)
+# max(corR.mat)
+max.index <- max(corR.mat)
+leeway <- 0.01
+limits <- c(min.index-leeway, max.index+leeway)
+
+# Aesthetics and labels. 
+your.title <- "+1-Many Neural Larva CTs vs. Zeb CTs, logFC > 0"
+your.xlab <- "Ciona Larva"
+your.ylab <- "Zeb 24hpf"
+your.fill <- "Corr"
+#4388F0, 42B5DD
+your.color <- "#56B273"
+your.face <- "bold"
+```
+
+```{r include=TRUE}
+p <- ggcorrplot(corr = corR.mat,
+           p.mat = corR.pval.mat)
+```
+
+```{r include=TRUE}
+p + scale_fill_gradient2(limit = limits,
+                          low = "#4C7CC4", mid = "white", high = "#BE1E0B") +
+  
+  ggplot2::labs(x = your.xlab, y = your.ylab, title = your.title, fill = your.fill) +
+  
+  ggplot2::theme(plot.title = element_text(size = 10, color = your.color, face = your.face),
+                 axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
+                 axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
+                 
+  )
+```
+"""
+(5.3) (a) Get # Significant Correlations. 
+      (b) Get Significance between zeb_CT and ciona_CT
+"""
+```{r include=TRUE}
+num.sig <- sum(corR.pval.mat < 0.05)
+num.sig
+
+num.CTs <- ncol(ciona.gsm)*ncol(zeb.gsm)
+perc.sig <- num.sig/num.CTs*100
+perc.sig
+```
+
+
