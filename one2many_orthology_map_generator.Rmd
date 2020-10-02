@@ -42,15 +42,6 @@ library(plotly)
 
 ##### Part 1: Make Heatmaps! #####
 
-"""
-  (1) Specify qualified_ciona_khids, qualified_zeb_genes (1-1 DEG orthologs).
-      Note: These are Embryo 1-1 DEG orthologs.
-      
-  (2) Specify Cell Type Lists.
-  
-  (3) Make ciona_avexp_df_v4, zeb_avexp_df_v4
-
-"""
 # Read in "one2one_many_dict.csv"
 ```{r include=TRUE}
 filtered.one2one.many.dict.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_many_larva_24hpf/filtered_one2one_many_export_dict_20_09_07.csv"
@@ -125,6 +116,97 @@ ciona.avexp.df <- ciona.df
 ```
 
 ############### START DO NOT TOUCH!!!! #################
+################# MODIFIED ZEB CTs ###################
+
+# Let us now make zeb.df. 
+# num_col = # CTs (43); num_rows = # of qualified.ciona.khids.
+```{r include=TRUE}
+# length(zeb_cell_type_list)- keep below
+mod.num.zeb.df.cols <- length(mod.zeb.cell.type.list)
+# Because this is the number of Ciona khids.
+mod.num.zeb.df.rows <- length(qualified.ciona.khids)
+# 3134 x 39
+mod.zeb.df <- data.frame(matrix(, nrow=mod.num.zeb.df.rows, ncol=mod.num.zeb.df.cols))
+```
+
+# Get colnames that correspond to various Zeb CTs.
+```{r include=TRUE}
+mod.zeb.df.colnames <- names(mod.zeb.cell.type.list)
+colnames(mod.zeb.df) <- mod.zeb.df.colnames
+```
+
+# Get rownames that represent mapping.
+```{r include=TRUE}
+# I discovered that there were 2 zeb_genes (ube2c_2 and rpl37_2) that mapped to 2 different khids that were 
+# labeled as 1-1. Their names are munged here.
+
+mod.zeb.df.rownames <- c()
+# seen.zeb.rownames <- c()
+
+for (i in 1:length(one2one.many.list)) {
+  khid <- names(one2one.many.list)[i]
+  cat("khid = ", khid, "\n\n")
+  
+  mod.zeb.names <- one2one.many.list[[i]][[1]]
+  # cat(zeb.names, "\n\n")
+  
+  mod.zeb.name.string <- paste(mod.zeb.names, collapse = "_")
+  # cat("zeb name string = ", zeb.name.string, "\n\n")
+  
+  if (mod.zeb.name.string %in% mod.zeb.df.rownames) {
+    # cat("PROBLEM zeb name string = ", zeb.name.string, "\n\n")
+    
+    # Add _2 to seen.zeb.rownames to avoid redundant rowname conflicts. 
+    mod.zeb.name.string <- paste(mod.zeb.name.string, "2", sep = "_")
+    # seen.zeb.rownames <- c(seen.zeb.rownames, zeb.name.string)
+
+  }
+  mod.zeb.df.rownames <- c(mod.zeb.df.rownames, mod.zeb.name.string)
+}
+
+# Modify zeb.df with these rownames. 
+rownames(mod.zeb.df) <- mod.zeb.df.rownames
+```
+
+# Make average expression dataframe.
+```{r include=TRUE}
+# For each Zeb CT
+for (i in 1:length(mod.zeb.cell.type.list)) {
+  mod.zeb.CT.name <- names(mod.zeb.cell.type.list)[i]
+  # Get its cells. 
+  mod.zeb.cells <- mod.zeb.cell.type.list[[i]]
+  mod.zeb.length <- length(mod.zeb.cells)
+  cat("Zeb CT = ", mod.zeb.CT.name, "\n", mod.zeb.length)
+  
+  # Get 1-1/1-many zeb genes.
+  for (j in 1:length(one2one.many.list)) {
+    cat("i = ", i, "j = ", j, "\n\n")
+    mod.one.many.zeb.genes <- one2one.many.list[[j]][[1]]
+    
+    # Subset Zeb Data based on these genes.
+    mod.zeb.sub <- zeb_data[mod.one.many.zeb.genes, mod.zeb.cells]
+    
+    # Get Average Expression.
+    mod.zeb.av <- sum(mod.zeb.sub)/mod.zeb.length
+    # Add to correct entry. 
+    mod.zeb.df[j, i] <- mod.zeb.av
+  }
+}
+```
+
+# Zeb Average Expression Matrix
+```{r include=TRUE}
+mod.zeb.avexp.df <- mod.zeb.df
+```
+
+############### END DO NOT TOUCH!!!! #################
+################# MODIFIED ZEB CTs ###################
+
+
+
+############### START DO NOT TOUCH!!!! #################
+#################### MODIFIED 43 ZEB CTs ######################## 
+
 
 # Let us now make zeb.df. 
 # num_col = # CTs (43); num_rows = # of qualified.ciona.khids.
@@ -146,7 +228,7 @@ colnames(zeb.df) <- zeb.df.colnames
 # Get rownames that represent mapping.
 ```{r include=TRUE}
 # I discovered that there were 2 zeb_genes (ube2c_2 and rpl37_2) that mapped to 2 different khids that were 
-# labelled as 1-1. Their names are munged here.
+# labeled as 1-1. Their names are munged here.
 
 zeb.df.rownames <- c()
 # seen.zeb.rownames <- c()
@@ -208,6 +290,7 @@ zeb.avexp.df <- zeb.df
 ```
 
 ############### END DO NOT TOUCH!!!! #################
+#################### 43 ZEB CTs ######################## 
 
 # Only heart_52 is f*** up. 
 # So I'm just going to do the hacky thing of calculating it separately
@@ -259,9 +342,16 @@ zeb.avexp.df$heart_52 <- fixed.heart.zeb.column
 ```{r include=FALSE}
 ciona.gsm <- make_gene_specificity_matrix(ciona.avexp.df)
 rownames(ciona.gsm) <- rownames(ciona.avexp.df)
+```
 
+```{r include=TRUE}
 zeb.gsm <- make_gene_specificity_matrix(zeb.avexp.df)
 rownames(zeb.gsm) <- rownames(zeb.avexp.df)
+```
+
+```{r include=TRUE}
+mod.zeb.gsm <- make_gene_specificity_matrix(mod.zeb.avexp.df)
+rownames(mod.zeb.gsm) <- rownames(mod.zeb.avexp.df)
 ```
 
 # Can only 1-many genes recapitulate these heatmaps?
@@ -285,27 +375,46 @@ corR.output <- corr.test(x= ciona.gsm,
                          adjust = "fdr")
 ```
 
+# Mod
+```{r include=TRUE}
+mod.corR.output <- corr.test(x= ciona.gsm,
+                         y = mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
 ```{r include=TRUE}
 corR.mat <- corR.output$r
 corR.pval.mat <- corR.output$p 
 ```
 
+# Mod
+```{r include=TRUE}
+mod.corR.mat <- mod.corR.output$r
+mod.corR.pval.mat <- mod.corR.output$p 
+```
+
 """
 (5.2) Visualize.
 """
+# SPECIFY #
+```{r include=TRUE}
+your.corR.mat <- mod.corR.mat
+your.corR.pval.mat <- mod.corR.pval.mat
+```
 
 # Parameters.
 ```{r include=TRUE}
 # Corr legend range. 
 # min(corR.mat)
-min.index <- min(corR.mat)
+min.index <- min(your.corR.mat)
 # max(corR.mat)
-max.index <- max(corR.mat)
+max.index <- max(your.corR.mat)
 leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
-your.title <- "Only 1-Many Larva CTs vs. Zeb CTs, logFC > 0"
+your.title <- "1-1 and 1-Many Larva CTs vs. Modified Zeb CTs"
 your.xlab <- "Ciona Larva"
 your.ylab <- "Zeb 24hpf"
 your.fill <- "Corr"
@@ -315,8 +424,8 @@ your.face <- "bold"
 ```
 
 ```{r include=TRUE}
-p <- ggcorrplot(corr = corR.mat,
-           p.mat = corR.pval.mat)
+p <- ggcorrplot(corr = your.corR.mat,
+           p.mat = your.corR.pval.mat)
 ```
 
 ```{r include=TRUE}
@@ -337,11 +446,14 @@ p + scale_fill_gradient2(limit = limits,
 (5.3) (a) Get # Significant Correlations. 
       (b) Get Significance between zeb_CT and ciona_CT
 """
+
+# CHANGE zeb.gsm/mod.zeb.gsm #
 ```{r include=TRUE}
-num.sig <- sum(corR.pval.mat < 0.05)
+num.sig <- sum(your.corR.pval.mat < 0.05)
 num.sig
 
-num.CTs <- ncol(ciona.gsm)*ncol(zeb.gsm)
+# zeb.gsm/mod.zeb.gsm
+num.CTs <- ncol(ciona.gsm)*ncol(mod.zeb.gsm)
 perc.sig <- num.sig/num.CTs*100
 perc.sig
 ```

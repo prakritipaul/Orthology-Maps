@@ -2,6 +2,8 @@
 title: "ciona_larvae_clustering"
 output: html_document
 ---
+## 9/21/20:
+## More fine-grained Clustering.
 
 # Follows from: orthology_maps_data_inputs.Rmd.
 
@@ -54,6 +56,17 @@ library(ggplot2)
 library(purrr)
 library(Hmisc)
 library(pvclust)
+library(URD)
+```
+
+# Chen's generosity. 
+```{r include=TRUE}
+plotTree(mesen.k250s6w4.tree.built.name, "stage", title="Developmental Stage")
+```
+```{r include=TRUE}
+plotTree(mesen.k250s6w4.tree.built.name, "segment", title="URD tree segment")
+plotDim(mesen.k250s6w4.tree.built.name, "segment", plot.title="URD tree segment")
+plotDists(mesen.k250s6w4.tree.built.name, "pseudotime", "stage", plot.title="Pseudotime by stage")
 ```
 
 # Markers 
@@ -68,6 +81,121 @@ mus_markers = c("KH2012:KH.S423.6", "KH2012:KH.L116.38", "KH2012:KH.C7.504")
 # last 2 are HAND2s
 heart_markers = c("KH2012:KH.C7.205", "KH2012:KH.C1.1116", "KH2012:KH.C14.604")
 ```
+
+############### IDENTIFY ALL TISSUES IN LARVA START 9/21/20 ##################
+
+# 110-Cell Markers for Unambiguous Tissue ID 
+```{r include=TRUE}
+# CNS-A, CNS-b, CNA-a, muscle, germ, notochord, epi-a, heart, nodal 
+chen_features <- c("KH2012:KH.C6.122", "KH2012:KH.C2.957", "KH2012:KH.S544.3",
+                   "KH2012:KH.S423.6", "KH2012:KH.C1.755", "KH2012:KH.S1404.1",
+                   "KH2012:KH.C12.323", "KH2012:KH.C3.100")
+
+####################################################################################################
+# Additional Chen's 4D paper Markers
+
+# a-epi 
+emc <- "KH2012:KH.C7.692"
+ci_zf041 <- "KH2012:KH.C4.378"
+emc2 <- "KH2012:KH.C7.157"
+rar <- "KH2012:KH.C9.580"
+
+# b-epi 
+ci_zf264 <- "KH2012:KH.C9.561"
+orphan_bhlh1 <- "KH2012:KH.C7.269"
+not <- "KH2012:KH.L172.23"
+sp8 <- "KH2012:KH.C13.22"
+soxb2 <- "KH2012:KH.S164.12"
+
+# A/B-noto
+brachury <- "KH2012:KH.S1404.1"
+mnx <- "KH2012:KH.L128.12"
+
+# A-noto
+ephrinA_a <- "KH2012:KH.C3.762"
+socs1_2_3_cis <- "KH2012:KH.L71.9"
+
+# B-noto
+hes_a <- "KH2012:KH.C1.159"
+# find these below first red block in heatmap 
+lefty <- "KH2012:KH.C3.411"
+noggin <- "KH2012:KH.C12.562"
+
+# germ cells
+macho_1 <- "KH2012:KH.C1.727"
+ci_zf262 <- "KH2012:KH.C1.1016"
+ci_zf114 <- "KH2012:KH.L154.37"
+
+# heart
+mesp <- "KH2012:KH.C3.100"
+ci_zf571 <- "KH2012:KH.C12.493"
+
+# muscle : very clear 
+tbx6c <- "KH2012:KH.S654.2"
+myod <- "KH2012:KH.C14.307"
+
+# B-mesench : very clear
+twist_like_1a <- "KH2012:KH.C5.416"
+twist_like_1b <- "KH2012:KH.C5.554"
+
+# A-mesench
+myt1 <- "KH2012:KH.C1.274"
+pinhead <- "KH2012:KH.C2.1069"
+fgf_8_17_18 <- "KH2012:KH.C5.5"
+
+# a-NS 
+dmrt1 <- "KH2012:KH.S544.3"
+ci_zf249 <- "KH2012:KH.C4.182"
+ephrinA_c <- "KH2012:KH.C3.52"
+elk <- "KH2012:KH.C8.247"
+a_ns_markers <- c(dmrt1, ci_zf249, ephrinA_c, elk)
+
+# b-NS
+msxb <- "KH2012:KH.C2.957"
+delta_like <- "KH2012:KH.L50.6"
+nodal <- "KH2012:KH.L106.16"
+b_ns_markers <- c(msxb, delta_like, nodal)
+
+# A-NS
+fgf_9_16_20 <- "KH2012:KH.C2.125"
+ci_zf064 <- "KH2012:KH.C11.318"
+# this is super specific 
+strong_A <- "KH2012:KH.C6.122"
+A_ns_markers <- c(fgf_9_16_20, ci_zf064, strong_A)
+
+# A-endo 
+sfrp2 <- "KH2012:KH.C2.469"
+eph4 <- "KH2012:KH.C1.146"
+
+# to distinguish A from B-endoderm 
+# should be: + A-endo, + A-mesench, - B-endo 
+noTrl <- "KH2012:KH.C1.1116"
+```
+
+# a-NS
+```{r include=TRUE}
+FeaturePlot(clean_chen_larva_integrated_20,
+            features = a_ns_markers)
+```
+# b-NS
+```{r include=TRUE}
+FeaturePlot(clean_chen_larva_integrated_20,
+            features = b_ns_markers)
+```
+# A-NS
+```{r include=TRUE}
+FeaturePlot(clean_chen_larva_integrated_20,
+            features = A_ns_markers)
+```
+
+# Noto-A/B
+```{r include=TRUE}
+# Hard to distinguish
+FeaturePlot(clean_chen_larva_integrated_20,
+            features = c(brachury,"KH2012:KH.C12.72", mnx, hes_a, noto_markers))
+```
+
+############### IDENTIFY ALL TISSUES IN LARVA START 9/21/20 ##################
 
 
 ################################################################################################

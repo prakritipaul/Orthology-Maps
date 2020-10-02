@@ -3,8 +3,15 @@
 	Script gets commons DEGs between Ciona and Zebrafish.
 	                                 (Larva, 24hpf)
 	Inputs:
-		(1) LOGFC_VAL : Either -1 or 0. 
-		(2) results_name: e.g. "one2one_24hpf_larva_khids.csv"
+		(1) LOGFC_VAL : Either -1 (upregulated by 2 fold, logFC=1) or 0.
+			-Also set to 0.25, 0.5, and 0.75.
+			-When set to 1, we look at all genes -> "all_larva_10.csv", "all_24hpf_10.csv", 
+			"all_20_08_26.png" = Baseline 1-1 orthology map.
+			-The higher the number, the less stringent the threshold.
+	
+		(2) results_name: e.g. "one2one_24hpf_larva_khids_logFC0.csv"
+			These are present in one2one_larva_24hpf directory. 
+		
 		(3*) Can also change out_dir: e.g. "/home/pprakriti/Desktop/" 
 
 
@@ -73,7 +80,7 @@ def get_unique_degs(files, logFC_val):
 # Global Variables.
 
 ## CHANGE ##
-LOGFC_VAL = 1
+LOGFC_VAL = -1
 DEG_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/"
 
 # Do for Ciona 

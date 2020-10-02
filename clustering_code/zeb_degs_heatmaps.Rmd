@@ -10,7 +10,11 @@ output: html_document
 # General Description: Validates Zeb Cell Type Mapping by examining Heatmaps and Distribution of Common DEG Counts.
 # Based on expression of top50 DEGs for each cell type. Gets cell names from ClusterIDs here.
 
-# Env used: env_zeb_24hpf_clustering.RData.
+# SEPT 2020: Improve Neural ID- didn't help.
+# NOTE: cell_type_list_1/4 were directly modified with latline transferred to epi_2.
+#   cell_type_list_1/4.backup and cell_type_list_1/4 are the same.
+
+# Env used: env_zeb_24hpf_clustering.RData. Also cluster_orthology_maps.Rdata (Sept 2020)
 # Note: Uses zeb_integrated_50 Seurat.
 
 # Complete Pipeline:
@@ -56,7 +60,6 @@ library(MAST)
 """
 Pipeline:
 Get cells -> DEGs -> top50 vector -> Heatmap -> Cluster Validations
-
 """
 
 """
@@ -485,6 +488,10 @@ common_deg_length_list_2[["diff_neu_rohon_beard"]] <- length(common_diff_neu_roh
 ```
 
 ```{r include=TRUE}
+wagner_nc <- c("crestin", "sox10", "tspan36", "ctsba", "slc2a15b", "cax1", "slc45a2", "slc2a11b", "pah", "LOC103911087", "akr1b1", "atp6v1g1", "impdh1b", "pcbd1", "si:ch211-102c2.5", "gch2", "gmps", "wu:fc46h12", "gpd1b", "LOC100003669", "sox10", "slc2a15b", "cax1", "slc45a2", "LOC103911087", "pah", "akr1b1", "gch2", "tspan36",	"slc2a11b", "wu:fc46h12", "crestin",	"pcbd1", "si:ch211-102c2.5", "LOC100003669", "ctsba", "gpd1b", "atp6v1g1", "gmps", "impdh1b")
+```
+
+```{r include=TRUE}
 # 9/39
 me_nc_nc_mcamb_irid <- rownames(marker_df_list_2$nc_nc_mcamb_irid)[1:20]
 
@@ -551,6 +558,30 @@ neur_hind_gsx1 <- WhichCells(zeb_integrated_50, idents = 11)
 neur_post_vent_nkx6_2 <- WhichCells(zeb_integrated_50, idents = 26) # 46
 ```
 
+# Added Sept 2020 
+```{r include=TRUE}
+wagner_neur_vent_hind <- c("sp8b", "lrrn1", "sox3", "gfap", "plp1a", "LOC100334443", "pax6a", "si:ch73-21g5.7", "sox19a")
+
+wagner_neur_mid <- c("eng2b", "sox19a", "otx2", "wu:fb25b09", "otx1a", "LOC103911157", "efna2a", "sox3", "otx1b")
+
+wagner_neur_dors_spinal_cord <- c("slc1a3a", "si:ch211-251b21.1", "mdka", "mdkb", "prss35", "gfap", "hoxc3a", "hoxb9a", "hoxa4a")
+
+wagner_neur_dien <- c("id3", "nkx2.4a", "prdx1", "nkx2.4b", "fezf2", "shha", "rx3", "nkx2.1", "sox1b")
+
+wagner_neur_dors_hind <- c("casz1", "mdkb", "zic1", "olig3", "zic2b", "zic2a", "epha2a", "fzd10", "cdon")
+
+wagner_neur_hind_roof <- c("wls", "cdon", "mdka", "cdh6", "atp1b3a", "rspo3", "igfbp7", "zic2a", "bmp5")
+
+wagner_neur_telen <- c("lrig1", "foxg1a", "LOC100538174", "fezf2", "cyp26c1", "mdkb", "sox1b", "sox5", "LOC100536415")
+
+wagner_neur_mid_vent_nkx6_2 <- c("ntn1a", "nkx6.2", "foxa1", "lrrn1", "ntn1b", "wu:fb25b09", "foxa", "otx1a", "sulf2b")
+
+wagner_neur_hind_gsx1 <- c("mdka", "lbx1b", "gsx1", "mdkb", "LOC100150849", "irx3a", "si:ch211-137a8.4", "sox19a", "plp1a")
+
+wagner_neur_post_vent_nkx6_2 <- c("ntn1a", "sulf2b", "nkx6.2", "nkx2.2b", "phox2bb", "nkx6.1", "nkx2.9", "ntn1b", "nkx2.2a")
+
+```
+
 # (2) Get DEGs (3)
 ```{r include=TRUE}
 cell_type_list_3 = list(neur_vent_hind, neur_mid, neur_dors_spinal_cord, neur_dien, neur_dors_hind, neur_hind_roof, neur_telen, neur_mid_vent_nkx6_2, neur_hind_gsx1, neur_post_vent_nkx6_2)
@@ -597,6 +628,11 @@ DoHeatmap(object = zeb_integrated_50,
           size = 2)
 ```
 
+```{r include=TRUE}
+FeaturePlot(zeb_integrated_50,
+            features = wagner_[1:9])
+```
+
 """
 Chunk 4
 """
@@ -615,7 +651,6 @@ meso <- WhichCells(zeb_integrated_50, idents = 46) # 62
 peri <- WhichCells(zeb_integrated_50, idents = 42)
 latline <- WhichCells(zeb_integrated_50, idents = 69)
 pec_fin_bud <- WhichCells(zeb_integrated_50, idents = 38) # 65
-
 ```
 
 ```{r include=TRUE}
@@ -795,7 +830,6 @@ common_pec_fin_bud <- intersect(me_pec_fin_bud, wagner_pec_fin_bud)
 common_deg_length_list_4[["pec_fin_bud"]] <- length(common_pec_fin_bud)
 ```
 
-
 """
 Validations 2: Get distribution of DEGs in Common
 
@@ -808,16 +842,55 @@ common_deg_counts <- c(unlist(common_deg_length_list_1),
                        unlist(common_deg_length_list_4))
 
 common_deg_count_hist <- hist(common_deg_counts)
-
 cat("median counts = ", median(common_deg_counts), "\n\n")
 cat("counts in each bin = ", common_deg_count_hist$counts)
 
 ```
 
+############ START MODIFY NEURAL CELL TYPE LIST 3, MAKE mod.zeb.cell.type.list #############
 
 """
-Unused Implementation
+  Let's modify cell_type_list_3 -> mod.cell.type.list.3 (10 -> 7 CTs)
+  
+  1. "neur_mid_vent_nkx6_2", "neur_post_vent_nkx6_2", "neur_mid" -> neur.mid.post.vent.nkx6.2
+  2. neur_vent_hind + neur_dors_hind + 30 -> neur.hind
+  3. neur_dors_spinal_cord -30 -> mod.neur_dors_spinal_cord
+  
+  Note: Use zeb_integrated_50 Seurat Object.
 """
+
+```{r include=TRUE}
+mod.neur_dors_spinal_cord <- WhichCells(zeb_integrated_50, idents = 24)
+neur.hind <- c(neur_vent_hind, neur_dors_hind, WhichCells(zeb_integrated_50, idents = 30))
+neur.mid.post.vent.nkx6.2 <- c(neur_mid_vent_nkx6_2, neur_post_vent_nkx6_2, neur_mid)
+```
+
+```{r include=TRUE}
+mod.cell.type.list.3 <- cell_type_list_3
+```
+
+```{r include=TRUE}
+mod.remove <- c("neur_mid_vent_nkx6_2", "neur_post_vent_nkx6_2", "neur_mid", "neur_vent_hind", "neur_dors_hind", "neur_dors_spinal_cord")
+mod.cell.type.list.3[mod.remove] <- NULL
+
+mod.cell.type.list.3[["mod.neur_dors_spinal_cord"]] <- mod.neur_dors_spinal_cord
+mod.cell.type.list.3[["neur.hind"]] <- neur.hind
+mod.cell.type.list.3[["neur.mid.post.vent.nkx6.2"]] <- neur.mid.post.vent.nkx6.2
+
+```
+
+```{r include=TRUE}
+mod.zeb.cell.type.list <- c(cell_type_list_1, cell_type_list_2, mod.cell.type.list.3, cell_type_list_4)
+```
+
+############ END MODIFY NEURAL CELL TYPE LIST 3. MAKE mod.zeb.cell.type.list #############
+
+
+
+
+
+##############   Unused Implementations ##############
+
 ```{r include=TRUE}
 # 4
 a <- matrix(0, ncol=50, nrow=1)
@@ -853,5 +926,133 @@ master_df <- rbind(a_df, b_df)
 write.csv(x=master_df, file="master_df.csv")
 ```
 
+########### SEPT 2020: IMPROVED BRAIN/NEURAL CT ID ############
+Note: This was not useful.
+
+"""
+1. Take out non-neural cells to clean up cell type list.
+"""
+
+```{r include=TRUE}
+# 19
+# Note: zeb.neural.CT.list has remove below.
+remove <- c("lens", "optic_cup", "rpe", "otic_plac", "tail_spinal_cord", "tail_PSM")
+zeb.neural.cell.type.list[remove] <- NULL
+```
+
+"""
+  Create a Seurat Object (zeb.neural.seurat) with only these cells.
+"""
+```{r include=TRUE}
+# 19690/34751
+zeb.neural.cells <- unlist(zeb.neural.cell.type.list)
+zeb.neural.counts <-  zeb_counts[, zeb.neural.cells]
+zeb.neural.min.cells <- 3
+zeb.neural.min.features <- 200 
+zeb.neural.n.features <- 2000
+```
+
+```{r include=TRUE}
+# 29744 x 19690
+zeb.neural.seurat <- CreateSeuratObject(counts = zeb.neural.counts,
+                                     min.cells = zeb.neural.min.cells, 
+                                     min.features = zeb.neural.min.features)
+  
+zeb.neural.seurat <- NormalizeData(object = zeb.neural.seurat)
+zeb.neural.seurat <- FindVariableFeatures(zeb.neural.seurat, 
+                                     selection.method = "vst",
+                                     nfeatures = zeb.neural.n.features)
+zeb.neural.seurat <- ScaleData(zeb.neural.seurat, verbose = FALSE)
+```
+
+# Standard Clustering
+```{r include=TRUE}
+zeb.neural.npcs <- 15
+zeb.neural.seurat <- RunPCA(zeb.neural.seurat, npcs = zeb.neural.npcs, verbose = FALSE)
+
+# ElbowPlot(zeb.neural.seurat)
+```
+
+```{r include=TRUE}
+zeb.neural.seurat <- RunTSNE(zeb.neural.seurat, dims = 1:zeb.neural.npcs)
+zeb.neural.seurat <- FindNeighbors(zeb.neural.seurat, dims = 1:zeb.neural.npcs)
+```
+
+```{r include=TRUE}
+zeb.neural.reso <- 1.3
+zeb.neural.seurat <- FindClusters(zeb.neural.seurat, resolution = zeb.neural.reso)
+```
+
+"""
+  Let's now ID CTs using Wagner DEGs
+"""
+```{r include=TRUE}
+DimPlot(zeb.neural.seurat, label = TRUE)
+```
+
+```{r include=TRUE}
+FeaturePlot(zeb.neural.seurat,
+            features = wagner_nc_irid[1:9])
+```
+```{r include=TRUE}
+FeaturePlot(zeb.neural.seurat,
+            features = wagner_nc_mcamb[1:9])
+```
+
+
+```{r include=TRUE}
+FeaturePlot(zeb_integrated_50,
+            features = wagner_neur_dors_hind[1:9])
+```
+
+"""
+ Can we tease nc from nc_nc_mcamb_irid (252) without messing up initial labels?
+ 
+ Not worth the reassignment! I am picking up on a lot of other cells using this           clustering. 
+"""
+```{r include=TRUE}
+# 138
+test.nc <- WhichCells(zeb.neural.seurat, idents = 25)
+# 866 
+test.mcamb.irid <- WhichCells(zeb.neural.seurat, idents = c(11, 28))
+```
+
+################ END ZEB NEURAL ###################
+"""
+Also add latline to epi_2.
+Replace it in cell_type_list
+"""
+```{r include=TRUE}
+# epi_2 <- c(epi_2, latline)
+```
+
+```{r include=TRUE}
+new.epi.2 <- epi_2
+```
+
+```{r include=TRUE}
+cell_type_list_1.backup <- cell_type_list_1
+```
+
+```{r include=TRUE}
+cell_type_list_1.backup["epi_2"] <- NULL
+cell_type_list_1.backup[["epi_2"]] <- new.epi.2
+```
+
+```{r include=TRUE}
+cell_type_list_1 <- cell_type_list_1.backup
+```
+
+"""
+  Also remove latline from cell_type_list_4
+"""
+```{r include=TRUE}
+cell_type_list_4.backup <- cell_type_list_4
+cell_type_list_4.backup[["latline"]] <- NULL
+```
+
+```{r include=TRUE}
+cell_type_list_4 <- cell_type_list_4.backup
+```
 
 

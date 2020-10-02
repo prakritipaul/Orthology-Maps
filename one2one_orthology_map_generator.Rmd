@@ -73,6 +73,7 @@ larva.khids <- larva.khids.df$V1
 zeb.genes <- zeb.genes.df$V1
 ```
 
+### CHANGE THIS ### 
 # Get 1-1 Ortholog Gene lists from above.
 ```{r include=TRUE}
 qualified_ciona_khids <- larva.khids
@@ -92,6 +93,7 @@ qualified_ciona_khids <- qualified_ciona_khids_pre[common_indices]
 qualified_zeb_genes <- qualified_zeb_genes_pre[common_indices]
 ```
 
+### CAN CHANGE ### 
 # Specify Zeb Cell Type List. zeb_cell_type_list has all Zeb CTs. 
 ```{r include=TRUE}
 # Note: We will change zeb_cell_type_list_v4 based on All/No Neural
@@ -247,37 +249,14 @@ p + scale_fill_gradient2(limit = limits,
       (b) Get Significance between zeb_CT and ciona_CT
 """
 ```{r include=TRUE}
-num.sig <- sum(corR_pval_mat < 0.05)
-num.sig
+num_sig <- sum(corR_pval_mat < 0.05)
+num_sig
 
-num.CTs <- ncol(ciona_gsm_v4)*ncol(zeb_gsm_v4)
-perc.sig <- num.sig/num.CTs*100
-perc.sig
+num_CTs <- ncol(ciona_gsm_v4)*ncol(zeb_gsm_v4)
+perc_sig <- num.sig/num.CTs*100
+perc_sig
 ```
 
-```{r include=TRUE}
-# CHANGE
-ciona.index <- 3 
-zeb.index <- 4 
-
-for (i in 1:ciona.index) {
-  for (j in 1:zeb.index) {
-    ciona.CT.list <- c("noto", "mus", "heart" )
-    zeb.CT.list <- c("noto", "muscles", "heart_52", "heart_51_56")
-    
-    ciona.CT <- ciona.CT.list[i]
-    zeb.CT <- zeb.CT.list[j]
-    
-    cat("ciona CT = ", ciona.CT, "\n", "zeb CT= ", zeb.CT, "\n")
-    p.val <- corR.pval.mat[ciona.CT, zeb.CT]
-    p.val <- signif(p.val, 3)
-    cat(p.val, "\n")
-    correlation <- corR.mat[ciona.CT, zeb.CT]
-    correlation <- signif(correlation, 3)
-    cat(correlation, "\n\n")
-  } 
-}
-```
 
 ##### Part 2: TF SMG ANALYSES #####
 """
@@ -684,5 +663,30 @@ sig_df <- subset(cor_df_v4, p_val < 0.05)
 "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_1/one2one_larva_24hpf_genes_logFC1.csv"
 
 
+```
+
+# I am not sure what this is. 
+```{r include=TRUE}
+# CHANGE
+ciona.index <- 3 
+zeb.index <- 4 
+
+for (i in 1:ciona.index) {
+  for (j in 1:zeb.index) {
+    ciona.CT.list <- c("noto", "mus", "heart" )
+    zeb.CT.list <- c("noto", "muscles", "heart_52", "heart_51_56")
+    
+    ciona.CT <- ciona.CT.list[i]
+    zeb.CT <- zeb.CT.list[j]
+    
+    cat("ciona CT = ", ciona.CT, "\n", "zeb CT= ", zeb.CT, "\n")
+    p.val <- corR.pval.mat[ciona.CT, zeb.CT]
+    p.val <- signif(p.val, 3)
+    cat(p.val, "\n")
+    correlation <- corR.mat[ciona.CT, zeb.CT]
+    correlation <- signif(correlation, 3)
+    cat(correlation, "\n\n")
+  } 
+}
 ```
 

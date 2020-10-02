@@ -134,6 +134,14 @@ zeb.neural.CTs <- c(cell_type_flags_2, cell_type_flags_3, "lens", "optic_cup", "
 zeb.neural.CT.list <- zeb_cell_type_list[zeb.neural.CTs]
 ```
 
+# Modified
+```{r include=TRUE}
+# 22 
+mod.zeb.neural.CTs <- c(names(cell_type_list_2), names(mod.cell.type.list.3), "lens", "optic_cup", "rpe", "otic_plac", "tail_spinal_cord", "tail_PSM")
+
+mod.zeb.neural.CT.list <- mod.zeb.cell.type.list[mod.zeb.neural.CTs]
+```
+
 # Get subset of Zeb Average Expression Matrix for only Zeb Neural CTs and
 # update by removing zeb_genes that correspond to not.qualified.ciona.khids.
 # Use: not.in.CNS.indices.
@@ -142,11 +150,16 @@ zeb.neural.CT.list <- zeb_cell_type_list[zeb.neural.CTs]
 zeb.neural.avexp.df <- zeb.avexp.df[-not.in.CNS.indices ,zeb.neural.CTs]
 ```
 
-"""
+# Modified
+```{r include=TRUE}
+# 3134 x 25 
+mod.zeb.neural.avexp.df <- mod.zeb.avexp.df[-not.in.CNS.indices ,mod.zeb.neural.CTs]
+```
 
+"""
 Perform the rest of the pipeline.
-
 """
+
 """
 (4) Make the GSM Dataframes, ciona/zeb.gsm 
     using ciona/zeb.neural.avexp.df 
@@ -157,6 +170,13 @@ rownames(ciona.gsm) <- rownames(ciona.neural.avexp.df)
 
 zeb.gsm <- make_gene_specificity_matrix(zeb.neural.avexp.df)
 rownames(zeb.gsm) <- rownames(zeb.neural.avexp.df)
+```
+
+# Modified
+```{r include=FALSE}
+# 3134 x 22
+mod.zeb.gsm <- make_gene_specificity_matrix(mod.zeb.neural.avexp.df)
+rownames(mod.zeb.gsm) <- rownames(mod.zeb.neural.avexp.df)
 ```
 
 # Can only 1-many genes recapitulate these heatmaps?
@@ -173,6 +193,7 @@ many.ciona.gsm <- ciona.gsm[many.zeb.grep, ]
 """
 (5.1) Use corr.test to make Correlation and P-Value Matrices.
 """
+
 ```{r include=TRUE}
 corR.output <- corr.test(x= ciona.gsm,
                          y = zeb.gsm,
@@ -185,6 +206,24 @@ corR.mat <- corR.output$r
 corR.pval.mat <- corR.output$p 
 ```
 
+# Modified
+```{r include=TRUE}
+mod.corR.output <- corr.test(x= ciona.gsm,
+                         y = mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
+mod.corR.mat <- mod.corR.output$r
+mod.corR.pval.mat <- mod.corR.output$p 
+```
+
+# SPECIFY #
+```{r include=TRUE}
+your.corR.mat <- corR.mat
+your.corR.pval.mat <- corR.pval.mat
+```
 """
 (5.2) Visualize.
 """
@@ -193,9 +232,9 @@ corR.pval.mat <- corR.output$p
 ```{r include=TRUE}
 # Corr legend range. 
 # min(corR.mat)
-min.index <- min(corR.mat)
+min.index <- min(your.corR.mat)
 # max(corR.mat)
-max.index <- max(corR.mat)
+max.index <- max(your.corR.mat)
 leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
@@ -210,8 +249,8 @@ your.face <- "bold"
 ```
 
 ```{r include=TRUE}
-p <- ggcorrplot(corr = corR.mat,
-           p.mat = corR.pval.mat)
+p <- ggcorrplot(corr = your.corR.mat,
+           p.mat = your.corR.pval.mat)
 ```
 
 ```{r include=TRUE}
@@ -230,11 +269,14 @@ p + scale_fill_gradient2(limit = limits,
 (5.3) (a) Get # Significant Correlations. 
       (b) Get Significance between zeb_CT and ciona_CT
 """
+
+# CHANGE zeb.gsm/mod.zeb.gsm #
 ```{r include=TRUE}
-num.sig <- sum(corR.pval.mat < 0.05)
+num.sig <- sum(your.corR.pval.mat < 0.05)
 num.sig
 
 num.CTs <- ncol(ciona.gsm)*ncol(zeb.gsm)
+num.CTs
 perc.sig <- num.sig/num.CTs*100
 perc.sig
 ```
