@@ -349,9 +349,23 @@ zeb.gsm <- make_gene_specificity_matrix(zeb.avexp.df)
 rownames(zeb.gsm) <- rownames(zeb.avexp.df)
 ```
 
+# Modified
 ```{r include=TRUE}
 mod.zeb.gsm <- make_gene_specificity_matrix(mod.zeb.avexp.df)
 rownames(mod.zeb.gsm) <- rownames(mod.zeb.avexp.df)
+```
+
+# Both: Problem is that there are 2 notos! 
+```{r include=TRUE}
+ciona.mod.zeb.gsm <- cbind(ciona.gsm, mod.zeb.gsm)
+cmz.colnames <- colnames(ciona.mod.zeb.gsm)
+cmz.replace <- c(paste("ciona_", (cmz.colnames[1:7])), "zeb_noto", cmz.colnames[9:length(cmz.colnames)])
+colnames(ciona.mod.zeb.gsm) <- cmz.replace
+```
+
+# THIS IS SO VERY HACKY- BECAUSE THERE'S AN OVERLAP IN VARIABLE NAME WITH BRAINMAP #
+```{r include=TRUE}
+CT.ciona.mod.zeb.gsm <- ciona.mod.zeb.gsm
 ```
 
 # Can only 1-many genes recapitulate these heatmaps?
@@ -369,16 +383,8 @@ many.ciona.gsm <- ciona.gsm[many.zeb.grep, ]
 (5.1) Use corr.test to make Correlation and P-Value Matrices.
 """
 ```{r include=TRUE}
-corR.output <- corr.test(x= ciona.gsm,
+corR.output <- corr.test(x= zeb.gsm,
                          y = zeb.gsm,
-                         method = "spearman",
-                         adjust = "fdr")
-```
-
-# Mod
-```{r include=TRUE}
-mod.corR.output <- corr.test(x= ciona.gsm,
-                         y = mod.zeb.gsm,
                          method = "spearman",
                          adjust = "fdr")
 ```
@@ -390,8 +396,28 @@ corR.pval.mat <- corR.output$p
 
 # Mod
 ```{r include=TRUE}
+mod.corR.output <- corr.test(x= ciona.gsm,
+                         y = mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
 mod.corR.mat <- mod.corR.output$r
 mod.corR.pval.mat <- mod.corR.output$p 
+```
+
+# Both
+```{r include=TRUE}
+CT.ciona.mod.zeb.corR.output <- corr.test(x= CT.ciona.mod.zeb.gsm,
+                         y = CT.ciona.mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
+CT.ciona.mod.zeb.corR.mat <- CT.ciona.mod.zeb.corR.output$r
+CT.ciona.mod.zeb.corR.pval.mat <- CT.ciona.mod.zeb.corR.output$p 
 ```
 
 """
@@ -399,8 +425,8 @@ mod.corR.pval.mat <- mod.corR.output$p
 """
 # SPECIFY #
 ```{r include=TRUE}
-your.corR.mat <- mod.corR.mat
-your.corR.pval.mat <- mod.corR.pval.mat
+your.corR.mat <- CT.ciona.mod.zeb.corR.mat
+your.corR.pval.mat <- CT.ciona.mod.zeb.corR.pval.mat
 ```
 
 # Parameters.
@@ -414,9 +440,9 @@ leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
-your.title <- "1-1 and 1-Many Larva CTs vs. Modified Zeb CTs"
-your.xlab <- "Ciona Larva"
-your.ylab <- "Zeb 24hpf"
+your.title <- "Similarity Matrix for Ciona and Zebrafish CTs"
+your.xlab <- "Ciona + Zeb 24hpf"
+your.ylab <- "Ciona + Zeb 24hpf"
 your.fill <- "Corr"
 #4388F0, 42B5DD
 your.color <- "#56B273"
@@ -437,7 +463,10 @@ p + scale_fill_gradient2(limit = limits,
   ggplot2::theme(plot.title = element_text(size = 10, color = your.color, face = your.face),
                  axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
                  axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
-                 
+                 axis.text.x = element_text(angle=45, color="black", size=10),
+                 axis.text.y = element_text(angle=45, color="black", size=10),
+                 legend.title = element_text(color = your.color, size = 9),
+                 legend.text = element_text(size = 9)
   )
 ```
 
@@ -453,7 +482,8 @@ num.sig <- sum(your.corR.pval.mat < 0.05)
 num.sig
 
 # zeb.gsm/mod.zeb.gsm
-num.CTs <- ncol(ciona.gsm)*ncol(mod.zeb.gsm)
+num.CTs <- ncol(ciona.mod.zeb.gsm)*ncol(ciona.mod.zeb.gsm)
+num.CTs
 perc.sig <- num.sig/num.CTs*100
 perc.sig
 ```

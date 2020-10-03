@@ -179,6 +179,25 @@ mod.zeb.gsm <- make_gene_specificity_matrix(mod.zeb.neural.avexp.df)
 rownames(mod.zeb.gsm) <- rownames(mod.zeb.neural.avexp.df)
 ```
 
+# Let's look at the entire similarity matrix. (Both)
+# Make ciona.mod.zeb.gsm
+```{r include=TRUE}
+ciona.mod.zeb.gsm <- cbind(ciona.gsm, mod.zeb.gsm)
+```
+
+# THIS IS SO VERY HACKY- BECAUSE THERE'S AN OVERLAP IN VARIABLE NAME WITH BRAINMAP #
+```{r include=TRUE}
+neural.ciona.mod.zeb.gsm <- ciona.mod.zeb.gsm
+```
+
+# Modify the colnames to specify organism. 
+```{r include=TRUE}
+neural.ciona.colnames <- paste0("ciona_", colnames(ciona.gsm))
+neural.zeb.colnames <- paste0("zeb_", colnames(mod.zeb.gsm))
+
+colnames(neural.ciona.mod.zeb.gsm) <- c(neural.ciona.colnames, neural.zeb.colnames)
+```
+
 # Can only 1-many genes recapitulate these heatmaps?
 ```{r include=TRUE}
 many.zeb.rows <- rownames(zeb.gsm)
@@ -195,7 +214,8 @@ many.ciona.gsm <- ciona.gsm[many.zeb.grep, ]
 """
 
 ```{r include=TRUE}
-corR.output <- corr.test(x= ciona.gsm,
+# zeb.gsm
+corR.output <- corr.test(x= zeb.gsm,
                          y = zeb.gsm,
                          method = "spearman",
                          adjust = "fdr")
@@ -219,10 +239,23 @@ mod.corR.mat <- mod.corR.output$r
 mod.corR.pval.mat <- mod.corR.output$p 
 ```
 
+# Both
+```{r include=TRUE}
+ciona.mod.zeb.corR.output <- corr.test(x= ciona.mod.zeb.gsm,
+                         y = ciona.mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
+ciona.mod.zeb.corR.mat <- ciona.mod.zeb.corR.output$r
+ciona.mod.zeb.corR.pval.mat <- ciona.mod.zeb.corR.output$p 
+```
+
 # SPECIFY #
 ```{r include=TRUE}
-your.corR.mat <- corR.mat
-your.corR.pval.mat <- corR.pval.mat
+your.corR.mat <- ciona.mod.zeb.corR.mat
+your.corR.pval.mat <- ciona.mod.zeb.corR.pval.mat
 ```
 """
 (5.2) Visualize.
@@ -239,7 +272,7 @@ leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
-your.title <- "+1-Many Neural Larva CTs vs. Zeb CTs, logFC > 0"
+your.title <- "Similarity Matrix for Zebrafish Neural Cell Types"
 your.xlab <- "Ciona Larva"
 your.ylab <- "Zeb 24hpf"
 your.fill <- "Corr"
@@ -259,9 +292,13 @@ p + scale_fill_gradient2(limit = limits,
   
   ggplot2::labs(x = your.xlab, y = your.ylab, title = your.title, fill = your.fill) +
   
-  ggplot2::theme(plot.title = element_text(size = 10, color = your.color, face = your.face),
+  ggplot2::theme(plot.title = element_text(size=16, color=your.color, face=your.face),
+                 axis.text.x = element_text(angle=45, color="black", size=5),
+                 axis.text.y = element_text(angle=45, color="black", size=5),
                  axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
-                 axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
+                 axis.title.y = element_text(angle = 0, color = your.color, face = your.face),
+                 legend.title = element_text(color = your.color, size = 9),
+                 legend.text = element_text(size = 9)
                  
   )
 ```
@@ -275,7 +312,7 @@ p + scale_fill_gradient2(limit = limits,
 num.sig <- sum(your.corR.pval.mat < 0.05)
 num.sig
 
-num.CTs <- ncol(ciona.gsm)*ncol(zeb.gsm)
+num.CTs <- ncol(zeb.gsm)*ncol(zeb.gsm)
 num.CTs
 perc.sig <- num.sig/num.CTs*100
 perc.sig
