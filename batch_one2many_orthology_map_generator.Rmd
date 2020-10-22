@@ -1,0 +1,436 @@
+---
+title: "batch_one2many_orthology_map_generator"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(Matrix)
+library(ggcorrplot)
+library(psych)
+library(stringr)
+library(plotly)
+```
+
+"""
+Helper Function to make Gene Specificity Matrix (Tosches)
+"""
+```{r include=TRUE}
+make_gene_specificity_matrix <- function(average_expression_matrix) {
+  # Given an average expression matrix, convert to a gene specificity matrix (Tosches)
+  # Args:
+  #   average_expression_matrix: 
+  #       e.g. ciona_average_expression_matrix <- cbind(ciona_df_1, ciona_df_2)
+  #
+  # Routine:
+  #     g_c/(1/N)sum(i in C)g_i
+  #
+  # Returns:
+  #   gsm: Output of above routine.
+  gsm_1 <- average_expression_matrix
+  # makes new column with  mean of the row (average expression of gene across all cell types)
+  gsm_1 <- gsm_1 %>% mutate(gene_CTs_avexp = rowMeans(.))
+  num_cell_types <- ncol(gsm_1)-1
+  gsm <- gsm_1[, 1:num_cell_types]/gsm_1[, num_cell_types+1]
+  
+  return(gsm)
+}
+```
+
+##### Batch-corrected data from ciona_larva_batch_integrated and finished_zeb_seurat #####
+```{r include=TRUE}
+# 13472 x 47782
+batch.ciona.data <- readRDS("/home/pprakriti/Desktop/batch_correction/ciona/gencomp_ciona_batch_correct_dir/gencomp_ciona_batch_data.rds")
+# 24232 x 34750
+batch.zeb.data <- readRDS("/home/pprakriti/Desktop/batch_correction/zeb/gencomp_zeb_batch_correct_dir/gencomp_zeb_batch_data.rds")
+```
+
+```{r include=TRUE}
+batch.ciona.CT.list <- ciona_cell_type_list
+batch.zeb.CT.list <- mod.zeb.cell.type.list
+```
+
+##### Part 1: Make Heatmaps! #####
+
+# Read in "one2one_many_dict.csv"
+```{r include=TRUE}
+export.qualified.batch.ortho.dict.csv <- "/home/pprakriti/Desktop/finish_gencom_zeb_seurat/munging/export_qualified_batch_ortho_dict.csv"
+# 3078
+qualified.batch.ortho.dict <- read.table(export.qualified.batch.ortho.dict.csv,
+                                         sep = ",",
+                                         header = FALSE,
+                                         stringsAsFactors = FALSE)
+```
+
+# qualified.batch.ortho.dict df -> batch.one2one.many.list = {khid : ['aimp1a' 'aimp1b']} 
+# Note: All lists are of length 1.
+```{r include=TRUE}
+# ??
+batch.one2one.many.list <- list()
+num.khids <- dim(qualified.batch.ortho.dict)[1]
+
+for (i in 1:num.khids) {
+  khid <- qualified.batch.ortho.dict$V1[i]
+  
+  zeb.genes <- qualified.batch.ortho.dict$V2[i]
+  zeb.genes <- strsplit(zeb.genes, " ")
+  batch.one2one.many.list[[khid]] <- zeb.genes
+}
+```
+
+# Ciona genes of interest- length of column should be the number of these genes.
+```{r include=TRUE}
+# 3078
+batch.qualified.ciona.khids <- names(batch.one2one.many.list)
+```
+
+<!-- # Make precursory Average Expression Matrix (ciona.df). -->
+<!-- ```{r include=TRUE} -->
+<!-- # Each row of a column should be a gene name.  -->
+<!-- batch.ciona.dummy.col <- rep(0, length(batch.qualified.ciona.khids)) -->
+<!-- batch.ciona.df <- data.frame("batch.ciona.dummy" = batch.ciona.dummy.col) -->
+<!-- ``` -->
+
+<!-- # Make Ciona Average Expression Matrix. -->
+<!-- ```{r include=TRUE} -->
+<!-- # For each Ciona CT -->
+<!-- for (i in 1:length(batch.ciona.CT.list)) { -->
+<!--   # Get its name.  -->
+<!--   batch.ciona.CT <- names(batch.ciona.CT.list)[i] -->
+<!--   cat("ciona CT = ", batch.ciona.CT, "\n\n") -->
+
+<!--   # All of its cells. -->
+<!--   batch.ciona.cells <- batch.ciona.CT.list[[i]] -->
+
+<!--   # Subset the matrix based on cells.  -->
+<!--   batch.ciona.data.pre <- batch.ciona.data[batch.qualified.ciona.khids, batch.ciona.cells] -->
+<!--   batch.ciona.data.df <- as.data.frame(batch.ciona.data.pre) -->
+
+<!--   # Get the average expression of each qualified.ciona.khid for the CT. -->
+<!--   batch.ciona.row <- rowMeans(batch.ciona.data.df) -->
+<!--   # Add to ciona.df. In the end, you should have 7 cols, each for a CT. -->
+<!--   batch.ciona.df <- cbind(batch.ciona.df, batch.ciona.row) -->
+<!-- } -->
+<!-- # Get rid of the dummy column. -->
+<!-- batch.ciona.df <- subset(batch.ciona.df, select = -(batch.ciona.dummy)) -->
+<!-- ``` -->
+
+<!-- ```{r include=TRUE} -->
+<!-- # Each column is a CT. -->
+<!-- batch.ciona.colnames <- names(batch.ciona.CT.list) -->
+<!-- colnames(batch.ciona.df) <- batch.ciona.colnames -->
+<!-- ``` -->
+
+# Ciona Average Expression Matrix.
+```{r include=TRUE}
+batch.ciona.avexp.df <- batch.ciona.df
+```
+
+############### START DO NOT TOUCH!!!! #################
+################# MODIFIED ZEB CTs ###################
+
+<!-- # Let us now make zeb.df.  -->
+<!-- # num_col = # CTs (43); num_rows = # of qualified.ciona.khids. -->
+<!-- ```{r include=TRUE} -->
+<!-- # length(zeb_cell_type_list)- keep below -->
+<!-- batch.mod.num.zeb.df.cols <- length(mod.zeb.cell.type.list) -->
+<!-- # Because this is the number of Ciona khids. -->
+<!-- batch.mod.num.zeb.df.rows <- length(batch.qualified.ciona.khids) -->
+<!-- # 3134 x 39 -->
+<!-- batch.mod.zeb.df <- data.frame(matrix(, nrow=batch.mod.num.zeb.df.rows, ncol=batch.mod.num.zeb.df.cols)) -->
+<!-- ``` -->
+
+<!-- # Get colnames that correspond to various Zeb CTs. -->
+<!-- ```{r include=TRUE} -->
+<!-- batch.mod.zeb.df.colnames <- names(mod.zeb.cell.type.list) -->
+<!-- colnames(batch.mod.zeb.df) <- batch.mod.zeb.df.colnames -->
+<!-- ``` -->
+
+<!-- # Get rownames that represent mapping. -->
+<!-- ```{r include=TRUE} -->
+<!-- # I discovered that there were 2 zeb_genes (ube2c_2 and rpl37_2) that mapped to 2 different khids that were  -->
+<!-- # labeled as 1-1. Their names are munged here. -->
+<!-- batch.mod.zeb.df.rownames <- c() -->
+<!-- # seen.zeb.rownames <- c() -->
+
+<!-- for (i in 1:length(batch.one2one.many.list)) { -->
+<!--   khid <- names(batch.one2one.many.list)[i] -->
+<!--   cat("khid = ", khid, "\n\n") -->
+
+<!--   batch.mod.zeb.names <- batch.one2one.many.list[[i]][[1]] -->
+<!--   # cat(zeb.names, "\n\n") -->
+
+<!--   batch.mod.zeb.name.string <- paste(batch.mod.zeb.names, collapse = "_") -->
+<!--   # cat("zeb name string = ", zeb.name.string, "\n\n") -->
+
+<!--   if (batch.mod.zeb.name.string %in% batch.mod.zeb.df.rownames) { -->
+<!--     # cat("PROBLEM zeb name string = ", zeb.name.string, "\n\n") -->
+
+<!--     # Add _2 to seen.zeb.rownames to avoid redundant rowname conflicts.  -->
+<!--     batch.mod.zeb.name.string <- paste(batch.mod.zeb.name.string, "2", sep = "_") -->
+<!--     # seen.zeb.rownames <- c(seen.zeb.rownames, zeb.name.string) -->
+
+<!--   } -->
+<!--   batch.mod.zeb.df.rownames <- c(batch.mod.zeb.df.rownames, batch.mod.zeb.name.string) -->
+<!-- } -->
+
+<!-- # Modify zeb.df with these rownames.  -->
+<!-- rownames(batch.mod.zeb.df) <- batch.mod.zeb.df.rownames -->
+<!-- ``` -->
+
+<!-- # Make average expression dataframe. -->
+<!-- ```{r include=TRUE} -->
+<!-- # For each Zeb CT -->
+<!-- for (i in 1:length(mod.zeb.cell.type.list)) { -->
+<!--   batch.mod.zeb.CT.name <- names(mod.zeb.cell.type.list)[i] -->
+<!--   # Get its cells.  -->
+<!--   batch.mod.zeb.cells <- mod.zeb.cell.type.list[[i]] -->
+<!--   batch.mod.zeb.length <- length(batch.mod.zeb.cells) -->
+<!--   cat("Zeb CT = ", batch.mod.zeb.CT.name, "\n", batch.mod.zeb.length) -->
+
+<!--   # Get 1-1/1-many zeb genes. -->
+<!--   for (j in 1:length(batch.one2one.many.list)) { -->
+<!--     cat("i = ", i, "j = ", j, "\n\n") -->
+<!--     batch.mod.one.many.zeb.genes <- batch.one2one.many.list[[j]][[1]] -->
+
+<!--     # Subset Zeb Data based on these genes. -->
+<!--     batch.mod.zeb.sub <- batch.zeb.data[batch.mod.one.many.zeb.genes, batch.mod.zeb.cells] -->
+
+<!--     # Get Average Expression. -->
+<!--     batch.mod.zeb.av <- sum(batch.mod.zeb.sub)/batch.mod.zeb.length -->
+<!--     # Add to correct entry.  -->
+<!--     batch.mod.zeb.df[j, i] <- batch.mod.zeb.av -->
+<!--   } -->
+<!-- } -->
+<!-- ``` -->
+
+<!-- # Zeb Average Expression Matrix -->
+<!-- ```{r include=TRUE} -->
+<!-- batch.mod.zeb.avexp.df <- batch.mod.zeb.df -->
+<!-- ``` -->
+
+############### END DO NOT TOUCH!!!! #################
+################# MODIFIED ZEB CTs ###################
+
+
+"""
+(4) Make the GSM Dataframes, ciona/zeb_gsm_v4
+"""
+```{r include=FALSE}
+batch.ciona.gsm <- make_gene_specificity_matrix(batch.ciona.avexp.df)
+rownames(batch.ciona.gsm) <- rownames(batch.ciona.avexp.df)
+```
+
+# Modified
+```{r include=TRUE}
+batch.mod.zeb.gsm <- make_gene_specificity_matrix(batch.mod.zeb.avexp.df)
+rownames(batch.mod.zeb.gsm) <- rownames(batch.mod.zeb.avexp.df)
+```
+
+# Both: Problem is that there are 2 notos! 
+```{r include=TRUE}
+batch.ciona.mod.zeb.gsm <- cbind(batch.ciona.gsm, batch.mod.zeb.gsm)
+batch.cmz.colnames <- colnames(batch.ciona.mod.zeb.gsm)
+
+batch.cmz.replace <- c(paste("ciona_", (batch.cmz.colnames[1:7])), "zeb_noto", batch.cmz.colnames[9:length(batch.cmz.colnames)])
+
+colnames(batch.ciona.mod.zeb.gsm) <- batch.cmz.replace
+```
+
+#### QUESTION WHAT IS THIS ####
+
+# THIS IS SO VERY HACKY- BECAUSE THERE'S AN OVERLAP IN VARIABLE NAME WITH BRAINMAP #
+```{r include=TRUE}
+batch.CT.ciona.mod.zeb.gsm <- batch.ciona.mod.zeb.gsm
+```
+
+### Pipeline 1: Adjusted p_vals, Visualizes significant p_vals.
+# Uses psych::corr.test
+
+"""
+(5.1) Use corr.test to make Correlation and P-Value Matrices.
+"""
+
+# Mod
+# CHANGE THESE batch.ciona.gsm, batch.mod.zeb.gsm
+```{r include=TRUE}
+# batch.ciona.gsm
+# batch.mod.zeb.gsm
+batch.mod.corR.output <- corr.test(x= batch.ciona.gsm,
+                                   y = batch.ciona.gsm
+                                   ,
+                                   method = "spearman",
+                                   adjust = "fdr")
+```
+
+# Mod 
+```{r include=TRUE}
+batch.mod.corR.mat <- batch.mod.corR.output$r
+batch.mod.corR.pval.mat <- batch.mod.corR.output$p 
+```
+
+# Both
+```{r include=TRUE}
+batch.CT.ciona.mod.zeb.corR.output <- corr.test(x= batch.CT.ciona.mod.zeb.gsm,
+                         y = batch.CT.ciona.mod.zeb.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+# Both
+```{r include=TRUE}
+batch.CT.ciona.mod.zeb.corR.mat <- batch.CT.ciona.mod.zeb.corR.output$r
+batch.CT.ciona.mod.zeb.corR.pval.mat <- batch.CT.ciona.mod.zeb.corR.output$p 
+```
+
+"""
+(5.2) Visualize.
+"""
+# SPECIFY #
+```{r include=TRUE}
+batch.your.corR.mat <- batch.CT.ciona.mod.zeb.corR.mat
+batch.your.corR.pval.mat <- batch.CT.ciona.mod.zeb.corR.pval.mat
+```
+
+# Parameters.
+```{r include=TRUE}
+# Corr legend range. 
+# min(corR.mat)
+# Zeb 24hpf
+# Ciona
+
+min.index <- min(batch.your.corR.mat)
+# max(corR.mat)
+max.index <- max(batch.your.corR.mat)
+leeway <- 0.01
+limits <- c(min.index-leeway, max.index+leeway)
+
+# Aesthetics and labels. 
+your.title <- "Batch-Corrected Similarity Matrix of Zeb 24hpf and Ciona CTs"
+your.xlab <- "Ciona"
+your.ylab <- "Zeb 24hpf"
+your.fill <- "Corr"
+#4388F0, 42B5DD
+your.color <- "#56B273"
+your.face <- "bold"
+```
+
+```{r include=TRUE}
+p <- ggcorrplot(corr = batch.your.corR.mat,
+           p.mat = batch.your.corR.pval.mat)
+```
+
+```{r include=TRUE}
+# angle=45, 90/0
+
+p + scale_fill_gradient2(limit = limits,
+                          low = "#4C7CC4", mid = "white", high = "#BE1E0B") +
+  
+  ggplot2::labs(x = your.xlab, y = your.ylab, title = your.title, fill = your.fill) +
+  
+  ggplot2::theme(plot.title = element_text(size = 10, color = your.color, face = your.face),
+                 axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
+                 axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
+                 axis.text.x = element_text(angle=45, color="black", size=10),
+                 axis.text.y = element_text(angle=45, color="black", size=10),
+                 legend.title = element_text(color = your.color, size = 9),
+                 legend.text = element_text(size = 9)
+  )
+```
+
+
+"""
+(5.3) (a) Get # Significant Correlations. 
+      (b) Get Significance between zeb_CT and ciona_CT
+"""
+
+```{r include=TRUE}
+num.sig <- sum(batch.your.corR.pval.mat < 0.05)
+num.sig
+
+# batch.mod.zeb.gsm
+num.CTs <- ncol(batch.mod.zeb.gsm)*ncol(batch.mod.zeb.gsm)
+num.CTs
+perc.sig <- num.sig/num.CTs*100
+perc.sig
+```
+# Question: How do correcltions change if I vary the number of Optic Cup cells?
+```{r include=TRUE}
+# Get distribution of num_cells for Zeb CTs. 
+```
+
+# Distribution of Cells 
+```{r include=TRUE}
+mod.zeb.neural.CT.nums <- sapply(mod.zeb.neural.CT.list, length)
+hist(mod.zeb.neural.CT.nums, freq = FALSE, breaks = 10)
+mean(mod.zeb.neural.CT.nums)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################### UNUSED ####################
+
+# Only heart_52 is f*** up. 
+# So I'm just going to do the hacky thing of calculating it separately
+# and then modifying zeb.avexp.df 
+
+####################### START FIX HEART 52! ######################
+
+```{r include=TRUE}
+fixed.heart.zeb.df.dummy.col <- rep(0, length(qualified.ciona.khids))
+fixed.heart.zeb.df <- data.frame("heart_52" = fixed.heart.zeb.df.dummy.col)
+
+fixed.heart.zeb.cells <- zeb_cell_type_list$heart_52
+fixed.heart.length <- length(fixed.heart.zeb.cells)
+
+# For each KHID
+for (j in 1:length(batch.one2one.many.list)) {
+  cat("i = ", i, "j = ", j, "\n\n")
+
+# Get its zeb orthologs. 
+  fixed.heart.one.many.zeb.genes <- batch.one2one.many.list[[j]][[1]]
+
+# Subset Zeb Data based on these zeb orthologs.
+fixed.heart.zeb.sub <- zeb_data[fixed.heart.one.many.zeb.genes, fixed.heart.zeb.cells]
+# Get Average Expression.
+fixed.heart.zeb.av <- sum(fixed.heart.zeb.sub)/fixed.heart.length
+# Add to correct entry. 
+fixed.heart.zeb.df[j, 1] <- fixed.heart.zeb.av
+}
+```
+
+# Get the Average Expression values for heart_52 (fixed.heart.zeb.column)
+```{r include=TRUE}
+# Correct! 
+fixed.heart.zeb.df
+# We want its values.
+fixed.heart.zeb.column <- fixed.heart.zeb.df$heart_52
+```
+
+# Replace heart_52 column in zeb.avexp.df
+```{r include=TRUE}
+zeb.avexp.df$heart_52 <- fixed.heart.zeb.column
+```
+
+####################### END FIX HEART 52! ######################

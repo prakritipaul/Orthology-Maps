@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 title: "orthology_map_heatmap_generator"
 output: html_document
 ---
+# 10/2020 NOTE: ciona_data and zeb_data has been modified to have DATA VALUES FROM 
+# INTEGRATED NOT RNA (batch-corrected) ASSAY SLOT.
 
 # Adapted from "gene_geneset_v4_pairwise.Rmd"
 # Refer to "mike_gene_lists.Rmd" for further munging.
@@ -38,6 +40,13 @@ library(ggcorrplot)
 library(psych)
 library(stringr)
 library(plotly)
+```
+
+##### 10/2020: Modify ciona/zeb_data #####
+```{r include=TRUE}
+ciona_data <- clean_chen_larva_integrated_20[["RNA"]]@data
+
+zeb_data <- zeb_integrated_50[["RNA"]]@data
 ```
 
 ##### Part 1: Make Heatmaps! #####

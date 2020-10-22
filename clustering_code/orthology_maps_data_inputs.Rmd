@@ -322,15 +322,15 @@ latTII2_matrix <- Read10X_h5(latTII2_dir)
 # larva
 ```{r include=TRUE}
 # 21
-larva1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764784_larva1_raw_gene_bc_matrices_h5.h5"
+larva1_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/4D_GSE131155_RAW/GSM3764784_larva1_raw_gene_bc_matrices_h5.h5"
 larva1_matrix <- Read10X_h5(larva1_dir)
 
 # 22
-larva2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764785_larva2_raw_gene_bc_matrices_h5.h5"
+larva2_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/4D_GSE131155_RAW/GSM3764785_larva2_raw_gene_bc_matrices_h5.h5"
 larva2_matrix <- Read10X_h5(larva2_dir)
 
 # 23
-larva3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology Maps/Raw_Data/4D_GSE131155_RAW/GSM3764786_larva3_raw_gene_bc_matrices_h5.h5"
+larva3_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/4D_GSE131155_RAW/GSM3764786_larva3_raw_gene_bc_matrices_h5.h5"
 larva3_matrix <- Read10X_h5(larva3_dir)
 ```
 

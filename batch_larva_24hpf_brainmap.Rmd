@@ -1,0 +1,198 @@
+---
+title: "batch_larva_24hpf_brainmap"
+output: html_document
+---
+
+# Uses Code from one2many_orthology_map_generator.Rmd
+# Subsets zeb.avexp.df for Neural Zeb CTs.
+# Uses Chen's brainmap CTs -> LTB2/larva Average Expression Vector.
+# Rest of pipeline is used for visualization.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(Matrix)
+library(ggcorrplot)
+library(psych)
+library(stringr)
+library(plotly)
+```
+
+"""
+
+(1) Make Neural Ciona Average Expression Matrix (ciona.neural.avexp.df).
+I need 2 data structures:
+
+(a) ciona.neural.CT.list
+(b) chen.cns.data
+
+"""
+## Make ciona.neural.cell.type.list.
+# Get all the data (will subset) and metadata (to get all CTs and their cells).
+```{r include=TRUE}
+batch.chen.neural.cells <- CNS.Seurat.LTB2.lv@cell.names
+chen.CNS.metadata <- CNS.Seurat.LTB2.lv@meta.data
+```
+
+# Get batch-corrected data matrix values
+```{r include=TRUE}
+batch.chen.neural.data <- batch.ciona.data[batch.chen.neural.cells, ]
+```
+
+```{r include=TRUE}
+batch.common.neural.ciona <- intersect(colnames(batch.ciona.data), batch.chen.neural.cells)  
+```
+
+# TO DO
+
+# Iterate through chen.CNS.CTs to make ciona.neural.CT.list.
+```{r include=TRUE}
+ciona.neural.CT.list <- list()
+
+for (chen.CNS.CT in chen.CNS.CTs) {
+  # Get dataframe relevant only to that CT. 
+  filtered.neural.df <- chen.CNS.metadata %>% filter(newcluster.comb.del.anno == chen.CNS.CT)
+  # Get CT's cells.
+  CT.cells <- rownames(filtered.neural.df)
+  # Update list.
+  ciona.neural.CT.list[[chen.CNS.CT]] <- CT.cells
+}
+```
+
+
+
+# Modified
+```{r include=TRUE}
+# 22 
+mod.zeb.neural.CTs <- c(names(cell_type_list_2), names(mod.cell.type.list.3), "lens", "optic_cup", "rpe", "otic_plac", "tail_spinal_cord", "tail_PSM")
+
+mod.zeb.neural.CT.list <- mod.zeb.cell.type.list[mod.zeb.neural.CTs]
+```
+
+# Get subset of Zeb Average Expression Matrix for only Zeb Neural CTs and
+# update by removing zeb_genes that correspond to not.qualified.ciona.khids.
+# Use: not.in.CNS.indices.
+
+# Modified
+```{r include=TRUE}
+# 3134 x 25 
+batch.mod.zeb.neural.gsm <- batch.mod.zeb.gsm[ ,mod.zeb.neural.CTs]
+```
+
+# TO DO #
+
+
+
+
+# TO DO #
+# Let's look at the entire similarity matrix. (Both)
+# Make ciona.mod.zeb.gsm
+```{r include=TRUE}
+ciona.mod.zeb.gsm <- cbind(ciona.gsm, mod.zeb.gsm)
+```
+
+# TO DO #
+# Modify the colnames to specify organism. 
+```{r include=TRUE}
+neural.ciona.colnames <- paste0("ciona_", colnames(ciona.gsm))
+neural.zeb.colnames <- paste0("zeb_", colnames(mod.zeb.gsm))
+
+colnames(neural.ciona.mod.zeb.gsm) <- c(neural.ciona.colnames, neural.zeb.colnames)
+```
+
+
+### Pipeline 1: Adjusted p_vals, Visualizes significant p_vals.
+# Uses psych::corr.test
+"""
+(5.1) Use corr.test to make Correlation and P-Value Matrices.
+"""
+
+# Self-Self
+```{r include=TRUE}
+# batch.mod.zeb.neural.gsm
+batch.neural.mod.corR.output <- corr.test(x= batch.mod.zeb.neural.gsm,
+                         y = batch.mod.zeb.neural.gsm,
+                         method = "spearman",
+                         adjust = "fdr")
+```
+
+```{r include=TRUE}
+batch.neural.mod.corR.mat <- batch.neural.mod.corR.output$r
+batch.neural.mod.corR.pval.mat <- batch.neural.mod.corR.output$p 
+```
+
+
+# SPECIFY #
+```{r include=TRUE}
+# batch.neural.mod.corR.mat
+# batch.neural.mod.corR.pval.mat
+
+your.corR.mat <- batch.neural.mod.corR.mat
+your.corR.pval.mat <- batch.neural.mod.corR.pval.mat
+```
+"""
+(5.2) Visualize.
+"""
+
+# Parameters.
+```{r include=TRUE}
+# Corr legend range. 
+# min(corR.mat)
+min.index <- min(your.corR.mat)
+# max(corR.mat)
+max.index <- max(your.corR.mat)
+leeway <- 0.01
+limits <- c(min.index-leeway, max.index+leeway)
+
+# Aesthetics and labels. 
+your.title <- "Similarity Matrix for Zebrafish Neural Cell Types"
+your.xlab <- "Ciona Larva"
+your.ylab <- "Zeb 24hpf"
+your.fill <- "Corr"
+#4388F0, 42B5DD
+your.color <- "#56B273"
+your.face <- "bold"
+```
+
+```{r include=TRUE}
+p <- ggcorrplot(corr = your.corR.mat,
+           p.mat = your.corR.pval.mat)
+```
+
+```{r include=TRUE}
+p + scale_fill_gradient2(limit = limits,
+                          low = "#4C7CC4", mid = "white", high = "#BE1E0B") +
+  
+  ggplot2::labs(x = your.xlab, y = your.ylab, title = your.title, fill = your.fill) +
+  
+  ggplot2::theme(plot.title = element_text(size=16, color=your.color, face=your.face),
+                 axis.text.x = element_text(angle=45, color="black", size=5),
+                 axis.text.y = element_text(angle=45, color="black", size=5),
+                 axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
+                 axis.title.y = element_text(angle = 0, color = your.color, face = your.face),
+                 legend.title = element_text(color = your.color, size = 9),
+                 legend.text = element_text(size = 9)
+                 
+  )
+```
+"""
+(5.3) (a) Get # Significant Correlations. 
+      (b) Get Significance between zeb_CT and ciona_CT
+"""
+
+# CHANGE zeb.gsm/mod.zeb.gsm #
+```{r include=TRUE}
+num.sig <- sum(your.corR.pval.mat < 0.05)
+num.sig
+
+num.CTs <- ncol(zeb.gsm)*ncol(zeb.gsm)
+num.CTs
+perc.sig <- num.sig/num.CTs*100
+perc.sig
+```
+

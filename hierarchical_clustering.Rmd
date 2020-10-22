@@ -32,10 +32,10 @@ gene_exp_df <- read.table(test.dir,
 """
 ```{r include=TRUE}
 # CT.ciona.mod.zeb.gsm
-# neural.ciona.mod.zeb.gsm
-# ciona.gsm
-# mod.zeb.gsm 
-your.gsm <- neural.ciona.mod.zeb.gsm
+# batch.CT.ciona.mod.zeb.gsm
+# batch.ciona.gsm
+# batch.mod.zeb.gsm
+your.gsm <- batch.mod.zeb.neural.gsm
 ```
 
 ```{r include=TRUE}
@@ -47,6 +47,17 @@ dd <- as.dist(1-p_cor)
 dend <- hclust(dd, method = "average")
 plot(dend, main = NULL, xlab = "", sub = "")
 ```
+
+```{r include=TRUE}
+# From one2many_orthology_map_generator.Rmd
+# df 
+p_cor <- cor(your.gsm, method = "spearman")
+dd <- as.dist(1-p_cor)
+
+dend <- hclust(dd, method = "complete")
+plot(dend, main = NULL, xlab = "", sub = "")
+```
+
 """
   Clustergram 
 """
@@ -56,6 +67,11 @@ gene_mat <- as.matrix(t.your.gsm)
 
 par(cex.main = 0.8, cexRow = 0.07)
 heatmap(gene_mat, Rowv = as.dendrogram(dend))
+
+```
+
+```{r include=TRUE}
+heatmap(gene_mat)
 ```
 
 ```{r include=TRUE}
