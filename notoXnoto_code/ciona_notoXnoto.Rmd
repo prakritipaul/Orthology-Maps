@@ -3,6 +3,18 @@ title: "notoXnoto"
 output: html_document
 ---
 
+# Point of this Script:
+# (1) Get min_n_features for each timepoint. 
+# (2) Save raw matrices in an Renv that will be used in gencomp.
+# (3) Also explore outputs of gencomp = Ensure batch correction worked. 
+# 
+# "DONE 1" means that min_n_features for a timepoint was catalogued in gencomp Rscript
+#        to make Seurat object 
+#   e.g. anchor_features_num <- 13900notoX in noto_larva_script.R for
+#   "notoXnoto_larva_seurat.rds"
+#
+# "DONE 2" means that Batch Correction was visually validated.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -16,9 +28,380 @@ library(Hmisc)
 library(pvclust)
 library(stringr)
 library(cellranger)
+library(Matrix)
 ```
 
 ################### PART 1: Get Chen's Raw 4D Data #######################
+
+# Dims of all matrices 15269 x 737280
+# iniG
+```{r include=TRUE}
+chen_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/4D_GSE131155_RAW/"
+# 1
+iniG1_dir <- paste0(chen_dir, "GSM3764764_iniG1_raw_gene_bc_matrices_h5.h5")
+iniG1_matrix <- Read10X_h5(iniG1_dir)
+
+iniG2_dir <- paste0(chen_dir, "GSM3764765_iniG2_raw_gene_bc_matrices_h5.h5")
+iniG2_matrix <- Read10X_h5(iniG2_dir)
+```
+
+# midG
+```{r include=TRUE}
+# 3
+midG1_dir <- paste0(chen_dir, "GSM3764766_midG1_raw_gene_bc_matrices_h5.h5")
+midG1_matrix <- Read10X_h5(midG1_dir)
+
+# 4
+midG2_dir <- paste0(chen_dir, "GSM3764767_midG2_raw_gene_bc_matrices_h5.h5")
+midG2_matrix <- Read10X_h5(midG2_dir)
+```
+
+# earN
+```{r include=TRUE}
+# 5
+earN1_dir <- paste0(chen_dir, "GSM3764768_earN1_raw_gene_bc_matrices_h5.h5")
+earN1_matrix <- Read10X_h5(earN1_dir)
+
+# 6
+earN2_dir <- paste0(chen_dir, "GSM3764769_earN2_raw_gene_bc_matrices_h5.h5")
+earN2_matrix <- Read10X_h5(earN2_dir)
+```
+
+# latN
+```{r include=TRUE}
+# 7
+latN1_dir <- paste0(chen_dir, "GSM3764770_latN1_raw_gene_bc_matrices_h5.h5")
+latN1_matrix <- Read10X_h5(latN1_dir)
+
+# 8
+latN2_dir <- paste0(chen_dir, "GSM3764771_latN2_raw_gene_bc_matrices_h5.h5")
+latN2_matrix <- Read10X_h5(latN2_dir)
+```
+
+# iniT1
+```{r include=TRUE}
+# 9
+iniTI1_dir <- paste0(chen_dir, "GSM3764772_iniTI1_raw_gene_bc_matrices_h5.h5")
+iniTI1_matrix <- Read10X_h5(iniTI1_dir)
+
+# 10
+iniTI2_dir <- paste0(chen_dir, "GSM3764773_iniTI2_raw_gene_bc_matrices_h5.h5")
+iniTI2_matrix <- Read10X_h5(iniTI2_dir)
+```
+
+# earT1
+```{r include=TRUE}
+# 11
+earTI1_dir <- paste0(chen_dir, "GSM3764774_earTI1_raw_gene_bc_matrices_h5.h5")
+earTI1_matrix <- Read10X_h5(earTI1_dir)
+
+# 12
+earTI2_dir <- paste0(chen_dir, "GSM3764775_earTI2_raw_gene_bc_matrices_h5.h5")
+earTI2_matrix <- Read10X_h5(earTI2_dir)
+```
+
+# midT2
+```{r include=TRUE}
+# 13
+midTII1_dir <- paste0(chen_dir, "GSM3764776_midTII1_raw_gene_bc_matrices_h5.h5")
+midTII1_matrix <- Read10X_h5(midTII1_dir)
+
+midTII2_dir <- paste0(chen_dir, "GSM3764777_midTII2_raw_gene_bc_matrices_h5.h5")
+midTII2_matrix <- Read10X_h5(midTII2_dir)
+```
+
+# latT1
+```{r include=TRUE}
+# 15
+latTI1a_dir <- paste0(chen_dir, "GSM3764778_latTI1a_raw_gene_bc_matrices_h5.h5")
+latTI1a_matrix <- Read10X_h5(latTI1a_dir)
+
+# 16
+latTI1b_dir <- paste0("/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/4D_GSE131155_RAW/GSM3764779_latTI1b_raw_gene_bc_matrices_h5.h5")
+latTI1b_matrix <- Read10X_h5(latTI1b_dir)
+
+# 17
+latTI2_dir <- paste0(chen_dir, "GSM3764780_latTI2_raw_gene_bc_matrices_h5.h5")
+latTI2_matrix <- Read10X_h5(latTI2_dir)
+```
+
+# latT2
+```{r include=TRUE}
+# 18
+latTII1a_dir <- paste0(chen_dir, "GSM3764781_latTII1a_raw_gene_bc_matrices_h5.h5")
+latTII1a_matrix <- Read10X_h5(latTII1a_dir)
+
+# 19
+latTII1b_dir <- paste0(chen_dir, "GSM3764782_latTII1b_raw_gene_bc_matrices_h5.h5")
+latTII1b_matrix <- Read10X_h5(latTII1b_dir)
+
+# 20
+latTII2_dir <- paste0(chen_dir, "GSM3764783_latTII2_raw_gene_bc_matrices_h5.h5")
+latTII2_matrix <- Read10X_h5(latTII2_dir)
+```
+
+# larva
+```{r include=TRUE}
+# 21
+larva1_dir <- paste0(chen_dir, "GSM3764784_larva1_raw_gene_bc_matrices_h5.h5")
+larva1_matrix <- Read10X_h5(larva1_dir)
+
+# 22
+larva2_dir <- paste0(chen_dir, "GSM3764785_larva2_raw_gene_bc_matrices_h5.h5")
+larva2_matrix <- Read10X_h5(larva2_dir)
+
+# 23
+larva3_dir <- paste0(chen_dir, "GSM3764786_larva3_raw_gene_bc_matrices_h5.h5")
+larva3_matrix <- Read10X_h5(larva3_dir)
+```
+
+"""
+(2) Do filtering steps to get number of filtered genes- will be used to determine min_n_features -> anchor_features_num in RScript.
+This will be the minimum of filtered genes from all Seurat Objects. 
+"""
+
+# Helper Function
+```{r include=TRUE}
+make_filtered_seurat <- function(raw_matrix, min_cells, min_features) {
+  # Filters Seurat Object to get number of filtered features that will be used
+  # as number of VariableFeatures for all Seurat Objects to be integrated.
+  # e.g. 2 Seurat Objects have 14310 and 12837 filtered features respectively.
+  # Downstream, both Seurat Objects will use 12830 n_features in FindVariableFeatures. 
+  seurat_object <- CreateSeuratObject(counts = raw_matrix,  
+                                    min.cells = min_cells,
+                                    min.features =  min_features)
+  return(seurat_object)
+}
+```
+
+# iniG - DONE 1, 2 
+```{r include=TRUE}
+# 14310 x 68708
+iniG1_matrix_seurat <- make_filtered_seurat(iniG1_matrix, 3, 200)
+# 12830 x 1422
+iniG2_matrix_seurat <- make_filtered_seurat(iniG2_matrix, 3, 200)
+
+# min_n_features <- 12800
+```
+
+# midG - DONE 1, 2 
+```{r include=TRUE}
+# 12869 x 1348
+midG1_matrix_seurat <- make_filtered_seurat(midG1_matrix, 3, 200)
+# 13694 x 6586
+midG2_matrix_seurat <- make_filtered_seurat(midG2_matrix, 3, 200)
+
+# min_n_features <- 12860
+```
+
+# earN - DONE 1, 2
+```{r include=TRUE}
+# 13811 x 2306
+earN1_matrix_seurat <- make_filtered_seurat(earN1_matrix, 3, 200)
+# 13692 x 6025
+earN2_matrix_seurat <- make_filtered_seurat(earN2_matrix, 3, 200)
+
+# min_n_features <- 13690
+```
+
+# latN - DONE 1, 2
+```{r include=TRUE}
+# 14059 x 3941
+latN1_matrix_seurat <- make_filtered_seurat(latN1_matrix, 3, 200)
+# 13863 x 6117
+latN2_matrix_seurat <- make_filtered_seurat(latN2_matrix, 3, 200)
+
+# min_n_features <- 13860
+```
+
+# iniTI1
+```{r include=TRUE}
+# 13857 x 2998
+iniTI1_matrix_seurat <- make_filtered_seurat(iniTI1_matrix, 3, 200)
+# 13234 x 3957
+iniTI2_matrix_seurat <- make_filtered_seurat(iniTI2_matrix, 3, 200)
+
+# min_n_features <- 13230
+```
+
+# earT - DONE 1, 2
+```{r include=TRUE}
+# 13565 x 5578
+earTI1_matrix_seurat <- make_filtered_seurat(earTI1_matrix, 3, 200)
+# 14129 x 9559
+earTI2_matrix_seurat <- make_filtered_seurat(earTI2_matrix, 3, 200)
+
+# min_n_features <- 13560
+```
+
+# midT - DONE 1, 2
+```{r include=TRUE}
+# 14309 x 5398
+midTII1_matrix_seurat <- make_filtered_seurat(midTII1_matrix, 3, 200)
+# 14066 x 5062
+midTII2_matrix_seurat <- make_filtered_seurat(midTII2_matrix, 3, 200)
+
+# min_n_features <- 14060
+```
+
+# LTB1 PART 1*********
+# We want aggregate files for a and b.
+```{r include=TRUE}
+LTB1_matrix_path <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB1/LTB1-aggr"
+# 15269 X 15745
+LTB1_agg_matrix <- Read10X(LTB1_matrix_path)
+```
+
+```{r include=TRUE}
+# 14064 x 10057
+# latTI1a_matrix_seurat <- make_filtered_seurat(latTI1a_matrix, 3, 200)
+# 13938 x 8792
+# latTI1b_matrix_seurat <- make_filtered_seurat(latTI1b_matrix, 3, 200)
+
+# 14328 x 5566
+latTI2_matrix_seurat <- make_filtered_seurat(latTI2_matrix, 3, 200)
+
+# 14356 x 15676
+LTB1_agg_matrix_seurat <- make_filtered_seurat(LTB1_agg_matrix, 3, 200)
+
+# min_n_features <- 14320
+```
+
+
+# latT2 ***************
+```{r include=TRUE}
+LTB2_matrix_path <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB2/LTB2-aggr"
+# 15269 x 6883
+LTB2_agg_matrix <- Read10X(LTB2_matrix_path)
+```
+
+```{r include=TRUE}
+# # 13776 x 2756
+# latTII1a_matrix_seurat <- make_filtered_seurat(latTII1a_matrix, 3, 200)
+# # 14152 x 5593
+# latTII1b_matrix_seurat <- make_filtered_seurat(latTII1b_matrix, 3, 200)
+
+# 14446 x 25491
+latTII2_matrix_seurat <- make_filtered_seurat(latTII2_matrix, 3, 200)
+# 14362 x 6883
+LTB2_agg_matrix_seurat <- make_filtered_seurat(LTB2_agg_matrix, 3, 200)
+
+# min_n_features <- 14360
+```
+
+# larva - Done 
+```{r include=TRUE}
+# 13933 x 28234
+larva1_matrix_seurat <- make_filtered_seurat(larva1_matrix, 3, 200)
+# 13907 x 12405
+larva2_matrix_seurat <- make_filtered_seurat(larva2_matrix, 3, 200)
+# 14067 x 7143
+larva3_matrix_seurat <- make_filtered_seurat(larva3_matrix, 3, 200)
+
+# min_n_features <- 13900
+```
+
+"""
+  Sanity check of RScript (noto_larva_script.R) for Larva 
+"""
+# RScript run on 11/7/20
+```{r include=TRUE}
+# 6.9/8.6GB (This is because PCA+UMAP was performed)
+notoXnoto_larva_seurat <- readRDS("/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_larva.rds")
+```
+
+# Compare to Stuff from October (first gencomp batch correction)
+```{r include=TRUE}
+# 2/3.4GB
+gencomp_ciona_batch_seurat <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correction/vera_batch_correction/ciona/gencomp_ciona_batch_correct_dir/gencomp_ciona_batch_seurat.rds")
+```
+
+"""
+  Test the other objects.
+"""
+# List of directories 
+```{r include=TRUE}
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_iniG_DONE/notoXnoto_iniG_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_earT_DONE/notoXnoto_earT_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_midT_DONE/notoXnoto_midT_seurat.rds"
+
+```
+
+```{r include=TRUE}
+ciona_rds <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_larva_DONE/notoXnoto_larva_seurat.rds"
+notoXnoto_seurat <- readRDS(ciona_rds)
+```
+
+```{r include=TRUE}
+DimPlot(notoXnoto_seurat, 
+        reduction = "umap",
+        label = TRUE,
+        group.by = "batch_name")
+
+```
+
+# Are the matrices the same (Larva)?
+# Yes! 
+
+############################ IDENTIFY NOTOCHORD CELLS, EXPLORATION ##############################
+
+# Upload Chen's object.
+```{r include=TRUE}
+# cells.subcluster
+load("/home/pprakriti/Desktop/ciona4D.10stage..noto.allstage.anno.Robj")
+```
+
+"""
+  Get unique flags = timepoint labels.
+  Note: I want to be working with metadata. 
+"""
+
+```{r include=TRUE}
+get_flag <- function(flag_cell_name, flag=FALSE, cell_name=FALSE) {
+  # Gets flag (timepoint of cell) or cell_name.
+  #
+  # Args: flag_cell. e.g. C110.1_AAAGATGCACCGCTAG
+  # Returns: flag. e.g. C110.1 or AAAGATGCACCGCTAG
+  output <- strsplit(flag_cell_name, "_")[[1]]
+  
+  if (flag==TRUE) {
+    result <- output[[1]]
+  }
+  if (cell_name==TRUE) {
+    result <- output[[2]]
+  }
+  return(result)
+}
+```
+
+# Names of Cells and their Timepoints 
+```{r include=TRUE}
+ciona_noto_metadata <- cells.subcluster@meta.data
+ciona_noto_cell_names <- rownames(ciona_noto_metadata)
+# 21 vs 23 (number of input files). This makes sense because Chen combined technical replicates.
+ciona_noto_unique_flags <- unique(sapply(ciona_noto_cell_names, FUN = get_flag, TRUE, FALSE))
+# 3744 vs 3750 (metadata rownames)
+ciona_noto_unique_cells <- unique(sapply(ciona_noto_cell_names, FUN = get_flag, FALSE, TRUE))
+```
+
+```{r include=TRUE}
+ciona_noto_unique_flags
+```
+```{r include=TRUE}
+test_ciona_cells <- ciona_noto_cell_names[1:10]
+test_ciona_cells
+```
+
+
+
+
+
+
+
+
+
+
+################### PREVIOUS CODE #######################
 # https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131155
 # General dims: 15269 x 737280
 
@@ -260,14 +643,3 @@ test_integrated_seurat_2 <- make_integrated_seurat(test_seurat_object_list_cont_
                                                  dims = 20,
                                                  n_anchor_features = test_min_n_features_2)
 ```
-
-################### END ENTIRE PIPELINE FOR INIG ####################
-
-
-################### START POST-GENCOMP #####################
-
-# (1) Import Seurat Object and Data
-# (2) Check Batch Correction 
-
-################### END POST-GENCOMP #####################
-
