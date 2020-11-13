@@ -244,7 +244,7 @@ midTII2_matrix_seurat <- make_filtered_seurat(midTII2_matrix, 3, 200)
 # min_n_features <- 14060
 ```
 
-# LTB1 PART 1*********
+# LTB1 ********* DONE 1, 2
 # We want aggregate files for a and b.
 ```{r include=TRUE}
 LTB1_matrix_path <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB1/LTB1-aggr"
@@ -268,7 +268,7 @@ LTB1_agg_matrix_seurat <- make_filtered_seurat(LTB1_agg_matrix, 3, 200)
 ```
 
 
-# latT2 ***************
+# LTB2 ********* DONE 1, 2
 ```{r include=TRUE}
 LTB2_matrix_path <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB2/LTB2-aggr"
 # 15269 x 6883
@@ -289,7 +289,7 @@ LTB2_agg_matrix_seurat <- make_filtered_seurat(LTB2_agg_matrix, 3, 200)
 # min_n_features <- 14360
 ```
 
-# larva - Done 
+# larva - DONE 1, 2
 ```{r include=TRUE}
 # 13933 x 28234
 larva1_matrix_seurat <- make_filtered_seurat(larva1_matrix, 3, 200)
@@ -316,22 +316,33 @@ notoXnoto_larva_seurat <- readRDS("/home/pprakriti/Desktop/vera_ciona_notoXnoto/
 gencomp_ciona_batch_seurat <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correction/vera_batch_correction/ciona/gencomp_ciona_batch_correct_dir/gencomp_ciona_batch_seurat.rds")
 ```
 
-"""
-  Test the other objects.
-"""
+
+#########  Test Batch Correction of All Seurat Objects.  ##########
+###################  Identify Notochord Cells   #################### 
+
 # List of directories 
 ```{r include=TRUE}
+
 "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_iniG_DONE/notoXnoto_iniG_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_midG_DONE/notoXnoto_midG_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_earN_DONE/notoXnoto_earN_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_latN_DONE/notoXnoto_latN_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_iniT_DONE/notoXnoto_iniT_seurat.rds"
 "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_earT_DONE/notoXnoto_earT_seurat.rds"
 "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_midT_DONE/notoXnoto_midT_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB1_DONE/notoXnoto_LTB1_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB2_DONE/notoXnoto_LTB2_seurat.rds"
+"/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_larva_DONE/notoXnoto_larva_seurat.rds"
 
 ```
 
+# (1) Load Seurat - CHANGE THIS!!!
 ```{r include=TRUE}
-ciona_rds <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_larva_DONE/notoXnoto_larva_seurat.rds"
+ciona_rds <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB2_DONE/notoXnoto_LTB2_seurat.rds"
 notoXnoto_seurat <- readRDS(ciona_rds)
 ```
 
+# (2) Check Batch Correction - All validated! 
 ```{r include=TRUE}
 DimPlot(notoXnoto_seurat, 
         reduction = "umap",
@@ -340,10 +351,97 @@ DimPlot(notoXnoto_seurat,
 
 ```
 
-# Are the matrices the same (Larva)?
-# Yes! 
+# (3) Cluster
+```{r include=TRUE}
+notoXnoto_seurat <- FindNeighbors(notoXnoto_seurat, dims = 1:15)
+notoXnoto_seurat <- FindClusters(notoXnoto_seurat, resolution = 1)
+```
 
-############################ IDENTIFY NOTOCHORD CELLS, EXPLORATION ##############################
+# (*) Visualize the Clusters 
+```{r include=TRUE}
+DimPlot(notoXnoto_seurat, 
+        reduction = "umap",
+        label = TRUE)
+```
+
+# (4) Identify Notochord Cells
+```{r include=TRUE}
+# Early, Extended Data Fig3
+# v. strong
+bra <- "KH2012:KH.S1404.1"
+foxAa <- "KH2012:KH.C11.313"
+mnx <- "KH2012:KH.L128.12"
+
+# Extended Data Fig2m
+# FBCD1; FGL1; FGL2 v. strong
+fibrinogen <- "KH2012:KH.C1.832"
+# noto8 <- "KH2012:KH.C11.665"
+
+
+C110_noto_markers <- c(bra, foxAa, mnx)
+ltb_noto_markers <- c("KH2012:KH.C5.124", "KH2012:KH.C8.749")
+test_noto_markers <- c("KH2012:KH.C8.293", "KH2012:KH.L18.22", "KH2012:KH.L116.66", "KH2012:KH.L18.117", "KH2012:KH.S643.6")
+
+FeaturePlot(object = notoXnoto_seurat,
+            features = c(C110_noto_markers, ltb_noto_markers),
+            reduction = "umap",
+            label = TRUE)
+```
+# (*) Validate Clusters using FindMarkers.
+```{r include=TRUE}
+# CHANGE!!!
+notoXnoto_idents <- c(20)
+# test_markers <- FindMarkers(notoXnoto_seurat, ident.1 = notoXnoto_idents)
+```
+
+"""
+  Get relevant Seurat Objects and Data Matrices
+"""
+
+# (5) Set notoXnoto_seurat to timepoint Seurat, get data matrix
+```{r include=TRUE}
+# CHANGE!!!
+LTB2_seurat <- notoXnoto_seurat
+# CHANGE!!!
+LTB2_mat <- notoXnoto_seurat@assays$integrated@data
+# CHANGE!!!
+LTB2_noto_cells <- WhichCells(notoXnoto_seurat, idents = notoXnoto_idents)
+# CHANGE!!!
+LTB2_noto_mat <- LTB2_mat[, LTB2_noto_cells]
+```
+
+# (6) Record Data in "notoXnoto Progress + Results".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#######################   I GOT RID OF INIG_SEURAT -> INIG_SUBSET   ###################
+
+```{r include=TRUE}
+iniG_subset <- subset(iniG_seurat, ident = c(19, 17, 15, 16, 12, 13, 14, 18, 9, 10))
+```
+
+```{r include=TRUE}
+DimPlot(iniG_subset, 
+        reduction = "umap",
+        label = TRUE)
+```
+
+######################### UNUSED: EXPLORE CHEN'S NOTOCHORD OBJECT ##########################
 
 # Upload Chen's object.
 ```{r include=TRUE}
@@ -391,17 +489,7 @@ ciona_noto_unique_flags
 test_ciona_cells <- ciona_noto_cell_names[1:10]
 test_ciona_cells
 ```
-
-
-
-
-
-
-
-
-
-
-################### PREVIOUS CODE #######################
+################### UNUSED CODE #######################
 # https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131155
 # General dims: 15269 x 737280
 
