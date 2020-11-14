@@ -7,6 +7,7 @@ output: html_document
 # (1) Get min_n_features for each timepoint. 
 # (2) Save raw matrices in an Renv that will be used in gencomp.
 # (3) Also explore outputs of gencomp = Ensure batch correction worked. 
+# (4) Batch-corrected data matrices were found for each Ciona timepoint.
 # 
 # "DONE 1" means that min_n_features for a timepoint was catalogued in gencomp Rscript
 #        to make Seurat object 
@@ -31,7 +32,8 @@ library(cellranger)
 library(Matrix)
 ```
 
-################### PART 1: Get Chen's Raw 4D Data #######################
+              ######################## PART 1 ########################## 
+################  GET N_MIN_FEATURES FOR GENCOMP SEURAT INTEGRATION  #######################
 
 # Dims of all matrices 15269 x 737280
 # iniG
@@ -267,7 +269,6 @@ LTB1_agg_matrix_seurat <- make_filtered_seurat(LTB1_agg_matrix, 3, 200)
 # min_n_features <- 14320
 ```
 
-
 # LTB2 ********* DONE 1, 2
 ```{r include=TRUE}
 LTB2_matrix_path <- "/home/pprakriti/Desktop/vera_ciona_notoXnoto/notoXnoto_LTB2/LTB2-aggr"
@@ -316,6 +317,33 @@ notoXnoto_larva_seurat <- readRDS("/home/pprakriti/Desktop/vera_ciona_notoXnoto/
 gencomp_ciona_batch_seurat <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correction/vera_batch_correction/ciona/gencomp_ciona_batch_correct_dir/gencomp_ciona_batch_seurat.rds")
 ```
 
+"""
+  Start Aside: Some munging; Getting "chen_larva_mat"
+"""
+
+# Add new noto cells (in addition to the ones ID'ed from before)
+```{r include=TRUE}
+ciona_cell_type_list[["larva_noto_cells"]] <- larva_noto_cells
+```
+
+# Rename noto cells to prevent future clashes.
+```{r include=TRUE}
+names(ciona_cell_type_list)[names(ciona_cell_type_list) == "ciona_noto"] <- "gencomp_ciona_noto"
+```
+
+```{r include=TRUE}
+gencomp_ciona_batch_data <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correction/vera_batch_correction/ciona/gencomp_ciona_batch_correct_dir/gencomp_ciona_batch_data.rds")
+```
+
+```{r include=TRUE}
+gencomp_ciona_noto_cells <- ciona_cell_type_list$gencomp_ciona_noto
+gencomp_ciona_noto_mat <- gencomp_ciona_batch_data[, gencomp_ciona_noto_cells]
+```
+
+"""
+  End Aside: Some munging; Getting "chen_larva_mat"
+"""
+       ##################### PART 2 #####################
 
 #########  Test Batch Correction of All Seurat Objects.  ##########
 ###################  Identify Notochord Cells   #################### 
