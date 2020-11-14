@@ -1,0 +1,281 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Purpose of Script: 
+# Part 1: Cluster and ID noto cells at each timepoint: 8, 10, 14, 18. 
+#     Note: We already have 24hpf information from gencomp/zeb_integrated_50/mod.zeb.cell.type.list
+# Part 2: Get Noto Cells (*_noto_cells) and Data Matrices (*_noto_mat)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(Hmisc)
+library(pvclust)
+library(stringr)
+library(cellranger)
+library(Matrix)
+library(MAST)
+```
+
+############################   PART 1   ############################
+        ############ Cluster and ID Noto Cells ############
+        
+```{r include=TRUE}
+parent_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Raw_Data/Klein_2018/"
+```
+        
+```{r include=TRUE}
+zeb_8hpf_dir <- paste0(parent_dir, "GSM3067191_08hpf.csv") 
+# 3569
+zeb_8hpf_df <- read.table(zeb_8hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+zeb_10hpf_dir <- paste0(parent_dir, "GSM3067192_10hpf.csv")
+# 4281
+zeb_10hpf_df <- read.table(zeb_10hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+zeb_14hpf_dir <- paste0(parent_dir, "GSM3067193_14hpf.csv")
+# 4002
+zeb_14hpf_df <- read.table(zeb_14hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+
+zeb_18hpf_dir <- paste0(parent_dir, "GSM3067194_18hpf.csv")
+# 6963
+zeb_18hpf_df <- read.table(zeb_18hpf_dir,
+                          sep = ",",
+                          header = TRUE,
+                          stringsAsFactors = FALSE)
+```
+
+"""
+  Start Aside: Let's munge these dataframes s.t. Rownames are genes and Colnames are only cells.
+"""
+```{r include=TRUE}
+rownames(zeb_8hpf_df) <- zeb_8hpf_df$Row
+zeb_8hpf_df$Row <- NULL
+```
+
+# Helper Function 
+```{r include=TRUE}
+clean_df <- function(zeb_df) {
+  rownames(zeb_df) <- zeb_df$Row
+  zeb_df$Row <- NULL
+  clean_zeb_df <- zeb_df
+  return(clean_zeb_df)
+}
+```
+
+```{r include=TRUE}
+zeb_10hpf_df <- clean_df(zeb_10hpf_df)
+zeb_14hpf_df <- clean_df(zeb_14hpf_df)
+zeb_18hpf_df <- clean_df(zeb_18hpf_df)
+```
+
+"""
+  End Aside: Let's munge these dataframes s.t. Rownames are genes and Colnames are only cells.
+"""
+
+##################  CLUSTER  #################
+
+"""
+  Make Seurats -> FindNeighbors
+"""
+# Helper Function
+```{r include=TRUE}
+make_zeb_seurat <- function(zeb_df, min_cells, min_features, n_features, zeb_pca_dims) {
+  zeb_seurat <- CreateSeuratObject(counts = zeb_df,
+                                   min.cells = min_cells, 
+                                   min.features = min_features)
+  
+  zeb_seurat <- NormalizeData(object = zeb_seurat)
+  
+  zeb_seurat <- FindVariableFeatures(zeb_seurat, 
+                                     selection.method = "vst",
+                                     nfeatures = n_features)
+  zeb_seurat <- ScaleData(object = zeb_seurat)
+  
+  zeb_seurat <- RunPCA(zeb_seurat, dims = 1:zeb_pca_dims)
+  
+  zeb_seurat <- FindNeighbors(zeb_seurat, dims = 1:zeb_pca_dims)
+  
+  return(zeb_seurat)
+}
+```
+
+"""
+  Make all of the Seurat Objects
+"""
+# (1) 8hpf
+```{r include=TRUE}
+zeb_8hpf_seurat <- make_zeb_seurat(zeb_8hpf_df, 3, 200, 2000, 20)
+```
+```{r include=TRUE}
+zeb_10hpf_seurat <- make_zeb_seurat(zeb_10hpf_df, 3, 200, 2000, 20)
+zeb_14hpf_seurat <- make_zeb_seurat(zeb_14hpf_df, 3, 200, 2000, 20)
+zeb_18hpf_seurat <- make_zeb_seurat(zeb_18hpf_df, 3, 200, 2000, 20)
+```
+
+"""
+  List of DEGs 
+"""
+
+```{r include=TRUE}
+wagner_deg_csv <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/Papers/Methods/wagner_klein_supp/wagner_klein_TableS2_csv.csv" 
+
+wagner_deg_df <- read.table(wagner_deg_csv,
+           sep = ",",
+           header = FALSE,
+           stringsAsFactors = FALSE)
+```
+
+# Let's munge this df a little bit.
+```{r include=TRUE}
+add_mast_id <- function(num, flag) {
+  mast_id_name <- paste0(flag, num)
+  return (mast_id_name)
+}
+
+nums <- 1:20
+enriched_ids <- sapply(nums, FUN = add_mast_id, "enriched_")
+rank_sum_ids <- sapply(nums, FUN = add_mast_id, "rank_sum_")
+```
+
+```{r include=TRUE}
+colnames(wagner_deg_df) <- c("Cluster_num", "Cluster_ID", "Cluster_name", "Timepoint_hpf", "Tissue_ID", "Tissue_name", enriched_ids, "Blank", rank_sum_ids)
+```
+
+"""
+  Get DEGs of Interest
+  (ClusterName, Enriched/Rank Sum MAST Genes)
+"""
+
+# CHANGE
+```{r include=TRUE}
+your_cluster_name <- "18hpf-notocord"
+your_start <- "enriched_1"
+your_end <- "enriched_20"
+
+wagner_df <- wagner_deg_df[wagner_deg_df$Cluster_name == your_cluster_name, ] %>%
+                                      select(all_of(your_start):all_of(your_end))
+
+# This is what will be used downstream.
+wagner_degs <- unique(as.character(wagner_df))
+```
+
+"""
+  Cluster + ID 
+"""
+# CHANGE! 
+```{r include=TRUE}
+your_seurat <- zeb_18hpf_seurat
+```
+
+# CHANGE! 
+```{r include=TRUE}
+your_reso <- 2
+```
+
+# (1) Find Clusters
+```{r include=TRUE}
+your_seurat <- FindClusters(your_seurat, resolution = your_reso)
+your_seurat <- RunUMAP(your_seurat, dims = 1:20)
+```
+
+# (*) Visualize the Clusters 
+```{r include=TRUE}
+DimPlot(your_seurat, 
+        reduction = "umap",
+        label = TRUE)
+```
+
+# (2) ID Noto Cells
+```{r include=TRUE}
+FeaturePlot(object = your_seurat,
+            features = wagner_degs[1:5],
+            reduction = "umap",
+            label = TRUE)
+```
+
+"""
+  Validate Clusters
+    Note: I am using Wilcox Test vs. Wagner MAST
+"""
+# Helper Function
+```{r include=TRUE}
+get_top_n_df <- function(cell_type, seurat_object, test_use, n_top) {
+  # Given a cell type (output of WhichCells), get n_top DEGs using FindMarkers
+  # with test of preference and custom munge_markers function 
+  # (ref docstring with details)
+  #
+  # Args and Returns: Self-explanatory
+  cell_type_markers <- FindMarkers(object = seurat_object,
+                                     ident.1 = cell_type,
+                                     test.use = test_use)
+  
+  munged_cell_type_markers <- munge_markers(cell_type_markers)[1:n_top, ]
+  
+  return(munged_cell_type_markers)
+}
+```
+
+# CHANGE!
+```{r include=TRUE}
+your_noto_cluster_ID <- c(31)
+```
+
+# (1) Get Noto Cells, and their DEG dfs. 
+```{r include=TRUE}
+your_noto_cells <- WhichCells(your_seurat, idents = your_noto_cluster_ID)
+your_degs_df <- get_top_n_df(your_noto_cells, your_seurat, "wilcox", 20)
+```
+
+# (2) Get common DEGs. 
+```{r include=TRUE}
+your_degs <- rownames(your_degs_df)
+common_degs <- intersect(wagner_degs, your_degs)
+length(common_degs)
+```
+
+"""
+  Get Data Matrices for Noto Cells
+"""
+# (1) Get Data Matrix
+```{r include=TRUE}
+your_mat <- your_seurat@assays$RNA@data
+your_noto_mat <- your_mat[, your_noto_cells]
+```
+
+# (2) Save noto cells and noto_mat.
+# CHANGE! 
+```{r include=TRUE}
+# zeb_8hpf_noto_cells/mat
+zeb_18hpf_noto_cells <- your_noto_cells
+zeb_18hpf_noto_mat <- your_noto_mat
+```
+
+# (3) Delete the Seurat Object! 
+
+# (4) Finally, extract 24hpf Data Mats
+```{r include=TRUE}
+batch_zeb_data <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correction/vera_batch_correction/zeb/gencomp_zeb_batch_correct_dir/gencomp_zeb_batch_data.rds")
+```
+
+```{r include=TRUE}
+zeb_24hpf_noto_cells <- mod.zeb.cell.type.list$noto
+zeb_24hpf_noto_mat <- batch_zeb_data[, zeb_24hpf_noto_cells]
+```
