@@ -1,0 +1,52 @@
+---
+title: "notoXnoto_pipeline"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(Matrix)
+library(ggcorrplot)
+library(psych)
+library(stringr)
+library(plotly)
+library(tidyr)
+```
+
+"""
+  I want to "collapse" zeb gene expression values
+"""
+
+```{r include=TRUE}
+# This I can make. 
+ortho_mapping <- data.frame("khid" = c("A_c", "A_c", "B_c"),
+                            "zeb_gene"= c("A_z1", "A_z2", "B_z"))
+# This I have.
+zeb_exp <- data.frame("zeb_gene" = c("A_z1", "A_z2", "B_z"),
+                      "cell_1" = c(1, 4, 7),
+                      "cell_2" = c(2, 5, 8),
+                      "cell_3" = c(3, 6, 9))
+
+ortho_mapping
+zeb_exp
+```
+
+```{r include=TRUE}
+zeb_exp_2 <- zeb_exp %>% left_join(ortho_mapping)
+zeb_exp_2
+
+# NOTE: Here I want to generalize the number of columns...
+zeb_exp_3 <- zeb_exp_2 %>% 
+  group_by(khid) %>%
+  summarise(gene_sum_1 = sum(cell_1),
+            gene_sum_2 = sum(cell_2),
+            gene_sum_3 = sum(cell_3))
+
+zeb_exp_3
+```
