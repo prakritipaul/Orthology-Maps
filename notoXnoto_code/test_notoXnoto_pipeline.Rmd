@@ -1,12 +1,11 @@
 ---
-title: "notoXnoto_pipeline"
+title: "test_notoXnoto_pipeline"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 ```{r include=FALSE}
 library(Seurat)
 library(tidyverse)
@@ -15,6 +14,7 @@ library(ggplot2)
 library(Matrix)
 library(ggcorrplot)
 library(psych)
+library(reshape2)
 ```
 
 ############ STEP 1 #############
@@ -31,12 +31,17 @@ ortho_mapping <- ortho_dict %>%
    separate_rows(zeb_gene, sep = " ")
 ```
 
-# Ortho khids and zeb_genes.
+# TEST: Get a subset of khids and corresponding zeb_genes to subset our test matrices with - CORRECT
 ```{r include=TRUE}
-# Should I "unique" these? 
-ortho_khids <- unique(ortho_mapping$khid)
-# I don't know why 8548 -> 6490
-ortho_zeb_genes <- ortho_mapping$zeb_gene
+# 4 (Will not need)
+test_ortho_khids <- c("KH2012:KH.C4.635", "KH2012:KH.C11.313", "KH2012:KH.C1.571", "KH2012:KH.C5.566") 
+
+# casq2, [foxa, foxa], [plod2, plod1a, plod3], copa
+# (Will not need)
+# 6
+test_ortho_mapping <- ortho_mapping %>% filter(khid %in% test_ortho_khids)
+# 6
+test_ortho_zeb_genes <- test_ortho_mapping$zeb_gene
 ```
 
 ############ PART 2 ############
@@ -56,26 +61,16 @@ modify_mat <- function(mat, subset_genes, col_rowname) {
 # Do for Ciona.
 ```{r include=TRUE}
 # REAL: subset_iniG <- modify_mat(iniG_noto_mat, ortho_khids, "khid")
-subset_iniG <- modify_mat(iniG_noto_mat, ortho_khids, "khid")
-subset_midG <- modify_mat(midG_noto_mat, ortho_khids, "khid")
-subset_earN <- modify_mat(earN_noto_mat, ortho_khids, "khid")
-subset_latN <- modify_mat(latN_noto_mat, ortho_khids, "khid")
-subset_iniT <- modify_mat(iniT_noto_mat, ortho_khids, "khid")
-subset_earT <- modify_mat(earT_noto_mat, ortho_khids, "khid")
-subset_midT <- modify_mat(midT_noto_mat, ortho_khids, "khid")
-subset_LTB1 <- modify_mat(LTB1_noto_mat, ortho_khids, "khid")
-subset_LTB2 <- modify_mat(LTB2_noto_mat, ortho_khids, "khid")
-subset_larva <- modify_mat(larva_noto_mat, ortho_khids, "khid")
+test_iniG <- modify_mat(iniG_noto_mat[, 1:5], test_ortho_khids, "khid")
+test_earN <- modify_mat(earN_noto_mat[, 1:5], test_ortho_khids, "khid")
+test_latN <- modify_mat(latN_noto_mat[, 1:5], test_ortho_khids, "khid")
 ```
 
 # Do for Zeb.
 ```{r include=TRUE}
 # REAL: subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
-subset_8hpf <- modify_mat(zeb_8hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
-subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
-subset_14hpf <- modify_mat(zeb_14hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
-subset_18hpf <- modify_mat(zeb_18hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
-subset_24hpf <- modify_mat(zeb_24hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
+test_10hpf <- modify_mat(zeb_10hpf_noto_mat[, 1:5], test_ortho_zeb_genes, "zeb_gene")
+test_14hpf <- modify_mat(zeb_14hpf_noto_mat[, 1:5], test_ortho_zeb_genes, "zeb_gene")
 ```
 
 ############# PART 3 #############
@@ -95,12 +90,8 @@ return(zeb_collapse)
 ```
 
 ```{r include=TRUE}
-# ~20s!!!
-subset_8hpf_collapse <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
-subset_10hpf_collapse <- collapse_zeb_mat(subset_10hpf, ortho_mapping)
-subset_14hpf_collapse <- collapse_zeb_mat(subset_14hpf, ortho_mapping)
-subset_18hpf_collapse <- collapse_zeb_mat(subset_18hpf, ortho_mapping)
-subset_24hpf_collapse <- collapse_zeb_mat(subset_24hpf, ortho_mapping)
+test_10hpf_collapse <- collapse_zeb_mat(test_10hpf, test_ortho_mapping)
+test_14hpf_collapse <- collapse_zeb_mat(test_14hpf, test_ortho_mapping)
 ```
 
 ############ PART 4 ##############
@@ -114,16 +105,9 @@ remove_khid_column <- function(ciona_matrix) {
 ```
 
 ```{r include=TRUE}
-subset_iniG_clean <- remove_khid_column(subset_iniG)
-subset_midG_clean <- remove_khid_column(subset_midG)
-subset_earN_clean <- remove_khid_column(subset_earN)
-subset_latN_clean <- remove_khid_column(subset_latN)
-subset_iniT_clean <- remove_khid_column(subset_iniT)
-subset_earT_clean <- remove_khid_column(subset_earT)
-subset_midT_clean <- remove_khid_column(subset_midT)
-subset_LTB1_clean <- remove_khid_column(subset_LTB1)
-subset_LTB2_clean <- remove_khid_column(subset_LTB2)
-subset_larva_clean <- remove_khid_column(subset_larva)
+test_iniG_clean <- remove_khid_column(test_iniG)
+test_earN_clean <- remove_khid_column(test_earN)
+test_latN_clean <- remove_khid_column(test_latN)
 ```
 
 ############# PART 5 #############
@@ -131,26 +115,15 @@ subset_larva_clean <- remove_khid_column(subset_larva)
 
 ```{r include=TRUE}
 # REAL: ciona_list = {subset_iniG...}
-ciona_list = list(iniG = subset_iniG_clean,
-                  midG = subset_midG_clean,
-                  earN = subset_earN_clean,
-                  latN = subset_latN_clean,
-                  iniT = subset_iniT_clean,
-                  earT = subset_earT_clean,
-                  midT = subset_midT_clean,
-                  LTB1 = subset_LTB1_clean,
-                  LTB2 = subset_LTB2_clean,
-                  larva = subset_larva_clean)
+test_ciona_list = list(test_iniG = test_iniG_clean,
+                       test_earN = test_earN_clean,
+                       test_latN = test_latN_clean)
 ```
 
-# WARNING: THERE ARE NANS!
 ```{r include=TRUE}
 # REAL: zeb_list = {subset_10hpf...}
-zeb_list = list(zeb_8hpf = subset_8hpf_collapse,
-                zeb_10hpf = subset_10hpf_collapse,
-                zeb_14hpf = subset_14hpf_collapse,
-                zeb_18hpf = subset_18hpf_collapse,
-                zeb_24hpf = subset_24hpf_collapse)
+test_zeb_list = list(test_10hpf = test_10hpf_collapse,
+                     test_14hpf = test_14hpf_collapse)
 ```
 
 ##############  PART 6  #############
@@ -178,20 +151,15 @@ make_gsm <- function(expression_matrix) {
 
 # Now you have the gsm'ed expression value matrices.
 ```{r include=TRUE}
-# 4636
-ciona_list_gsm <- map(ciona_list, make_gsm)
-```
-
-```{r include=TRUE}
-# 4430, Has NaNs 
-zeb_list_gsm <- map(zeb_list, make_gsm)
+test_ciona_list_gsm <- map(test_ciona_list, make_gsm)
+test_zeb_list_gsm <- map(test_zeb_list, make_gsm)
 ```
 
 ###### 
 # Cross test_ciona_list_gsm and test_zeb_list_gsm to make pairs of gsm'ed noto matrices (c x z) = test_cross_gsm. 
 ```{r include=TRUE}
 # Here I want to get pairwise key names. 
-cross_gsm <- cross2(ciona_list_gsm, zeb_list_gsm)
+test_cross_gsm <- cross2(test_ciona_list_gsm, test_zeb_list_gsm)
 ```
 
 # Give informative key names.
@@ -209,10 +177,10 @@ give_names <- function(your_list) {
 
 # Get the names - CORRECT 
 ```{r include=TRUE}
-cross_gsm_names <- cross2(names(ciona_list_gsm), names(zeb_list_gsm))
-cross_gsm_names <- cross_gsm_names %>% map(give_names)
+test_cross_gsm_names <- cross2(names(test_ciona_list_gsm), names(test_zeb_list_gsm))
+test_cross_gsm_names <- test_cross_gsm_names %>% map(give_names)
 
-names(cross_gsm) <- cross_gsm_names
+names(test_cross_gsm) <- test_cross_gsm_names
 ```
 
 # I want to do a function on each of these pairs- present in [[1]] and [[2]].
@@ -231,8 +199,8 @@ do_correlation <- function(pairwise_gsm_mats) {
 # Apply cor to all the pairs and get results = test_gsm_corrs. 
 ```{r include=TRUE}
 # List of length 4. 
-gsm_corrs <- map(cross_gsm, do_correlation)
-names(gsm_corrs) <- cross_gsm_names
+test_gsm_corrs <- map(test_cross_gsm, do_correlation)
+names(test_gsm_corrs) <- test_cross_gsm_names
 ```
 
 # Get significant correlations. 
@@ -260,6 +228,7 @@ names(test_sig_corrs) <- test_sig_corrs_names
 test_medians <- map_dbl(test_sig_corrs, median)
 test_medians
 ```
+
 # Make a matrix -> heatmap
 ```{r include=TRUE}
 test_heatmap_mat <- as.data.frame(matrix(test_medians, nrow=length(test_ciona_list), ncol=length(test_zeb_list)))
@@ -268,13 +237,59 @@ rownames(test_heatmap_mat) <- names(test_ciona_list)
 colnames(test_heatmap_mat) <- names(test_zeb_list)
 ```
 
-# Consider what I might do if there are NAs... Just for testing
-# ```{r include=TRUE}
-# test_NA_indices <- is.na(test_heatmap_mat)
-# test_heatmap_mat[test_NA_indices] <- c(0.4, 0.1, 0.8, 0.2)
-# ```
+# Just for testing
+```{r include=TRUE}
+test_NA_indices <- is.na(test_heatmap_mat)
+test_heatmap_mat[test_NA_indices] <- c(0.4, 0.1, 0.8, 0.2)
+```
 
 ```{r include=TRUE}
 ggcorrplot(test_heatmap_mat)
+```
+
+############# TESTS ###############
+# Helper Function works as expected. 
+```{r include=TRUE}
+test_sig_cor_fn <- get_sig_corrs(test_gsm_corrs$`test_earN/test_10hpf`)
+```
+
+# Individual testing
+```{r include=TRUE}
+test_pair_output <- test_gsm_corrs$`gsm_test_latN/test_10hpf`
+test_corr_r <- test_pair_output$r
+test_corr_p <- test_pair_output$p
+  
+test_which_p <- which(test_corr_p < 0.05)
+test_sig_corr <- test_corr_r[test_which_p]
+```
+
+# Note: Make sure you get the list names. 
+# "corr" + original name. 
+
+# Each key of test_gsm_corrs is an output of corr.test. 
+# pairwise correlation of all cells in ciona_noto (t_c = 10) and zeb_noto (t_z = 5)
+# I want to take the median of all the entries in the dataframe. (1 number -> 50 numbers)
+# The medians are the entries of test_mat. test_mat is named! 
+```{r include=TRUE}
+# vector of length 4.
+test_mat <- test_gsm_corrs %>% map(as.matrix) %>% map_dbl(median)
+```
+
+# Make the dataframe with row and col names.
+# (1) Make a matrix. Then convert. nrow = c; ncol = z.
+```{r include=TRUE}
+test_mat_2 <- matrix(test_mat, nrow = length(test_list_1), ncol = length(test_list_2))
+test_df <- as.data.frame(test_mat_2)
+# give them nice col and row names. (You can do this manually).
+```
+
+
+
+##########################
+
+TESTS
+
+```{r include=TRUE}
+testing_mod <- modify_mat(test_ortho_zeb_genes, zeb_10hpf_noto_mat[, 1:5], "zeb_gene")
 ```
 

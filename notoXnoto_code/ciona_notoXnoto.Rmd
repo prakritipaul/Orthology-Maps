@@ -440,10 +440,46 @@ LTB2_noto_mat <- LTB2_mat[, LTB2_noto_cells]
 
 # (6) Record Data in "notoXnoto Progress + Results".
 
+# (7) Get names of all KHIDs that appear in matrices.
+```{r include=TRUE}
+all_ciona_notoXnoto_khid_list <- list(rownames(iniG_noto_mat),
+                               rownames(midG_noto_mat),
+                               rownames(earN_noto_mat),
+                               rownames(latN_noto_mat),
+                               rownames(iniT_noto_mat),
+                               rownames(earT_noto_mat),
+                               rownames(midT_noto_mat),
+                               rownames(LTB1_noto_mat),
+                               rownames(LTB2_noto_mat),
+                               rownames(larva_noto_mat))
+# 11401
+all_ciona_notoXnoto_khids <- Reduce(intersect, all_ciona_notoXnoto_khid_list)
+```
 
+# Check that all matrices have these khids. 
+```{r include=TRUE}
+check_in <- function(your_vec, to_check_vec) {
+  # checks if all of "to_check_vec" is in "your_vec"
+  return(all(to_check_vec %in% your_vec))
+}
+```
 
+# Yes they do! 
+```{r include=TRUE}
+sapply(X = all_ciona_notoXnoto_khid_list, 
+       FUN = check_in, c(all_ciona_notoXnoto_khids))                     
+```
 
+# Write out to csv.
+```{r include=TRUE}
+output_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/notoXnoto/"
+output_name <- "all_ciona_notoXnoto_khids.csv"
 
+write.table(x = all_ciona_notoXnoto_khids,
+          file = paste0(output_dir, output_name),
+          row.names = FALSE,
+          col.names = FALSE)
+```
 
 
 

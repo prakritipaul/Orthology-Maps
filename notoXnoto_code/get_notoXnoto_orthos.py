@@ -2,7 +2,7 @@
 
 	Given all_ciona_notoXnoto_khids (generated in ciona_notoXnoto.Rmd) and 
 	all_zeb_notoXnoto_genes (generated in zeb_notoXnoto.Rmd)- these are khids/zeb_genes
-	that are the union of genes present in all timepoint matrices.
+	that are the intersection of genes present in all timepoint matrices.
 
 	Script finds common 1-1 and 1-many orthologs.
 
@@ -15,22 +15,16 @@ import pickle
 from pprint import pprint
 from collections import defaultdict as dd
 
-# (1) Import 1-1 and 1-many ortholog dict.
-PARENT_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/all_ortholog_pickles/"
-FILTERED_DICT_NAME = "filtered_one2one2_many_dict.pickle"
-FILTERED_DICT_DIR = PARENT_DIR+FILTERED_DICT_NAME
+						### Import 1-1 and 1-many ortholog dict. ###
+PICKLE = open("/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/all_ortholog_pickles/ciona_converted_ortho_dict.pickle", "rb")
+CIONA_CONVERTED_ORTHO_DICT = pickle.load(PICKLE)
 
-FILTERED_ONE2ONE2_MANY_PICKLE = open(FILTERED_DICT_DIR, "rb")
-FILTERED_ONE2ONE2_MANY_DICT = pickle.load(FILTERED_ONE2ONE2_MANY_PICKLE)
-
-
-# (2) Import csv's.
+									### Import csv's. ###
 PARENT_DIR = "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/notoXnoto/"
 CIONA_CSV = "all_ciona_notoXnoto_khids.csv"
 ZEB_CSV = "all_zeb_notoXnoto_genes.csv"
 
-
-# (3) Get Gene Lists for Ciona and Zeb. 
+						### Get Gene Lists for Ciona and Zeb. ### 
 # Helper Function
 def get_gene_list(YOUR_DIR, to_print=False):
 	# Get all genes in csvile (khids/zeb_genes)
@@ -56,37 +50,56 @@ ZEB_GENES_CSV = PARENT_DIR+ZEB_CSV
 ALL_CIONA_NOTOXNOTO_GENES = get_gene_list(CIONA_GENES_CSV)
 ALL_ZEB_NOTOXNOTO_GENES = get_gene_list(ZEB_GENES_CSV)
 
-# (4) Get 1-1 and 1-many orthologs.
-# 2995/3140
-QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT = dict()
-# 401 khids present in Ciona noto matrices but do not have orthologs 
-# with zeb_genes in Zeb noto matrices.  
-UNQUALIFIED_KHIDS = list()
 
-# Perfom the Routine. 
+							### Get 1-1 and 1-many orthologs. ###
 
-for khid in ALL_CIONA_NOTOXNOTO_GENES:
-	if khid in FILTERED_ONE2ONE2_MANY_DICT:
-		tsln_khids = FILTERED_ONE2ONE2_MANY_DICT[khid]
+# 4636/7578
+QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT = dd(list)
 
-		if any(tsln_khid in ALL_ZEB_NOTOXNOTO_GENES for tsln_khid in tsln_khids):
-			QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT[khid] = tsln_khids
-		else:
-			# These genes have zeb orthologs, but the zeb orthologs 
-			# are not present in Zeb noto matrices.
-			UNQUALIFIED_KHIDS.append(khid)
-	else:
-		UNQUALIFIED_KHIDS.append(khid)
-		print("Not in filtered dict = ", khid, "\n")
+for ciona_notoxnoto_gene in ALL_CIONA_NOTOXNOTO_GENES:
+	if ciona_notoxnoto_gene in CIONA_CONVERTED_ORTHO_DICT:
+		zeb_ortholog_pre_list = CIONA_CONVERTED_ORTHO_DICT.get(ciona_notoxnoto_gene)
+
+		for zeb_ortholog_pre in zeb_ortholog_pre_list:
+			zeb_ortholog = zeb_ortholog_pre[1]
+
+			if zeb_ortholog in ALL_ZEB_NOTOXNOTO_GENES:
+				QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT[ciona_notoxnoto_gene].append(zeb_ortholog)
 
 
-# QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT
+								### Write out as csv file ###
 
+								### Routine 2 ###
+					### Turn this into an export dict {khid:"zeb_gene_1 zeb_gene_2"} ###
 
+def make_zeb_string(zeb_list):
+	zeb_string = " ".join(zeb_list)
+	return(zeb_string)
 
-# Make lists.
+def make_one2one_many_export_dict(one2one_many_export_dict_pre):
+	one2one_many_export_dict = dict()
 
+	for khid in one2one_many_export_dict_pre:
+		zeb_list = one2one_many_export_dict_pre[khid]
+		zeb_string = make_zeb_string(zeb_list)
 
-# Perform Routine
+		one2one_many_export_dict[khid] = zeb_string
+		
+	return one2one_many_export_dict
 
-# Export as... 
+EXPORT_QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT = make_one2one_many_export_dict(QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT)
+
+# Write out as .csv.
+def make_csv(output_dict, output_dir, output_file_name):	
+	with open(output_dir+output_file_name, "w") as csvfile:
+	    csvwriter = csv.writer(csvfile)
+
+	    for key, value in output_dict.items():
+	        csvwriter.writerow([key, value])
+	return None
+
+OUT_DIR = "/home/pprakriti/Desktop/"
+OUT_FILE_NAME = "export_qualified_one2one_many_notoxnoto_dict.csv"
+
+make_csv(EXPORT_QUALIFIED_ONE2ONE_MANY_NOTOXNOTO_DICT, OUT_DIR, OUT_FILE_NAME)
+

@@ -166,7 +166,7 @@ colnames(wagner_deg_df) <- c("Cluster_num", "Cluster_ID", "Cluster_name", "Timep
 
 # CHANGE
 ```{r include=TRUE}
-your_cluster_name <- "18hpf-notocord"
+your_cluster_name <- "08hpf-notocord"
 your_start <- "enriched_1"
 your_end <- "enriched_20"
 
@@ -182,12 +182,12 @@ wagner_degs <- unique(as.character(wagner_df))
 """
 # CHANGE! 
 ```{r include=TRUE}
-your_seurat <- zeb_18hpf_seurat
+your_seurat <- zeb_8hpf_seurat
 ```
 
 # CHANGE! 
 ```{r include=TRUE}
-your_reso <- 2
+your_reso <- 1
 ```
 
 # (1) Find Clusters
@@ -235,7 +235,7 @@ get_top_n_df <- function(cell_type, seurat_object, test_use, n_top) {
 
 # CHANGE!
 ```{r include=TRUE}
-your_noto_cluster_ID <- c(31)
+your_noto_cluster_ID <- c(10)
 ```
 
 # (1) Get Noto Cells, and their DEG dfs. 
@@ -264,8 +264,8 @@ your_noto_mat <- your_mat[, your_noto_cells]
 # CHANGE! 
 ```{r include=TRUE}
 # zeb_8hpf_noto_cells/mat
-zeb_18hpf_noto_cells <- your_noto_cells
-zeb_18hpf_noto_mat <- your_noto_mat
+zeb_8hpf_noto_cells <- your_noto_cells
+zeb_8hpf_noto_mat <- your_noto_mat
 ```
 
 # (3) Delete the Seurat Object! 
@@ -279,3 +279,40 @@ batch_zeb_data <- readRDS("/home/pprakriti/Desktop/orthology_map_batch_correctio
 zeb_24hpf_noto_cells <- mod.zeb.cell.type.list$noto
 zeb_24hpf_noto_mat <- batch_zeb_data[, zeb_24hpf_noto_cells]
 ```
+
+# (5) Get names of all zeb_genes that appear in matrices.
+```{r include=TRUE}
+all_zeb_notoXnoto_gene_list <- list(rownames(zeb_8hpf_noto_mat),
+                                    rownames(zeb_10hpf_noto_mat),
+                                    rownames(zeb_14hpf_noto_mat),
+                                    rownames(zeb_18hpf_noto_mat),
+                                    rownames(zeb_24hpf_noto_mat))
+# 24155
+all_zeb_notoXnoto_genes <- Reduce(intersect, all_zeb_notoXnoto_gene_list)
+```
+
+# Check that all matrices have these khids. 
+```{r include=TRUE}
+check_in <- function(your_vec, to_check_vec) {
+  # checks if all of "to_check_vec" is in "your_vec"
+  return(all(to_check_vec %in% your_vec))
+}
+```
+
+# Yes they do! 
+```{r include=TRUE}
+sapply(X = all_zeb_notoXnoto_gene_list, 
+       FUN = check_in, all_zeb_notoXnoto_genes)                   
+```
+# Write out to csv.
+```{r include=TRUE}
+output_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/notoXnoto/"
+output_name <- "all_zeb_notoXnoto_genes.csv"
+
+write.table(x = all_zeb_notoXnoto_genes,
+          file = paste0(output_dir, output_name),
+          row.names = FALSE,
+          col.names = FALSE)
+
+```
+
