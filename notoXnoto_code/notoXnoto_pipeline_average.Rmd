@@ -1,0 +1,606 @@
+---
+title: "notoXnoto_pipeline_average"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(Seurat)
+library(tidyverse)
+library(stringr)
+library(ggplot2)
+library(Matrix)
+library(ggcorrplot)
+library(psych)
+```
+
+############ STEP 1 #############
+# Make the appropriate test variables.
+# REAL: "ortho_mapping"
+```{r include=TRUE}
+ortho_dict <- read.table("/home/pprakriti/Desktop/export_qualified_one2one_many_notoxnoto_dict.csv",
+                         sep = ",",
+                         header = FALSE,
+                         stringsAsFactors = FALSE)
+colnames(ortho_dict) <- c("khid", "zeb_gene")
+
+ortho_mapping <- ortho_dict %>%
+   separate_rows(zeb_gene, sep = " ")
+```
+
+# There was an error in 8hpf and 18hpf noto_matrices.
+```{r include=TRUE}
+# 103 
+zeb_8hpf_noto_mat <- zeb_8hpf_df[, zeb_8hpf_noto_cells]
+# 59
+zeb_18hpf_noto_mat <- zeb_18hpf_df[, zeb_18hpf_noto_cells]
+```
+
+##########   RESOLVED: WE NEED TO UNDERSTAND HOW TO DEAL WITH ZEB DUPLICATES  #########
+
+# Ortho khids and zeb_genes.
+```{r include=TRUE}
+# 4363 (correct, as expected).
+ortho_khids <- unique(ortho_mapping$khid)
+
+# 8548 -> 6490 => There are many-1 orthologs (ciona -> zeb).
+ortho_zeb_genes <- ortho_mapping$zeb_gene
+```
+
+```{r include=TRUE}
+# This is a dataframe with zeb_genes that have 1-1 and 1-many orthologs. (U)
+# 5490 
+unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>%
+  filter(num == 1)
+# 5490
+unique_ortho_zeb_genes <- unique_zeb_gene_df$zeb_gene
+
+# These are the khids that correspond to zeb_genes in U. 
+# There will be repeats because there are 1 KHID -> multiple zeb_genes cases.   
+# 5490
+corr_khid_U <- ortho_mapping %>% filter(zeb_gene %in% unique_ortho_zeb_genes)
+# 3766
+corr_khids <- unique(corr_khid_U$khid)
+```
+
+############ MAKE AND MUNGE iniG_noto_mat/zeb_8hpf_noto_mat -> subset_iniG/subset_8hpf ############
+
+# Helper Function. 
+```{r include=TRUE}
+modify_mat <- function(mat, subset_genes, col_rowname) {
+  # Munges Matrix of batch-corrected values from noto_mats (mat) into a dataframe with 
+  # rownames of khids/zeb_genes (mod_mat). Its column name is col_rowname = khid/zeb_gene.
+  # subset_genes = ortho_khids/ortho_zeb_genes.
+  mod_mat <- as.data.frame(mat[subset_genes, ])
+  mod_mat[[col_rowname]] <- rownames(mod_mat)
+  return(mod_mat)
+}
+```
+
+# Do for Ciona.
+```{r include=TRUE}
+# REAL: subset_iniG <- modify_mat(iniG_noto_mat, ortho_khids, "khid")
+subset_iniG <- modify_mat(iniG_noto_mat, corr_khids, "khid")
+subset_midG <- modify_mat(midG_noto_mat, corr_khids, "khid")
+subset_earN <- modify_mat(earN_noto_mat, corr_khids, "khid")
+subset_latN <- modify_mat(latN_noto_mat, corr_khids, "khid")
+subset_iniT <- modify_mat(iniT_noto_mat, corr_khids, "khid")
+subset_earT <- modify_mat(earT_noto_mat, corr_khids, "khid")
+subset_midT <- modify_mat(midT_noto_mat, corr_khids, "khid")
+subset_LTB1 <- modify_mat(LTB1_noto_mat, corr_khids, "khid")
+subset_LTB2 <- modify_mat(LTB2_noto_mat, corr_khids, "khid")
+subset_larva <- modify_mat(larva_noto_mat, corr_khids, "khid")
+```
+
+# Do for Zeb.
+```{r include=TRUE}
+# REAL: subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
+subset_8hpf <- modify_mat(zeb_8hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+subset_14hpf <- modify_mat(zeb_14hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+subset_18hpf <- modify_mat(zeb_18hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+subset_24hpf <- modify_mat(zeb_24hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+```
+
+############# COLLAPSE ZEB MATS subset_8hpf -> subset_8hpf_collapse (no khid col, only expression matrix) #############
+
+# Helper Function.  
+```{r include=TRUE}
+collapse_zeb_mat <- function(zeb_mat, ortho_mapping) {
+  # zeb_mat (n_zeb_genes x cells + zeb_gene) + ortho_mapping -> 
+  # zeb_collapse (n_khids, cells). "Collapse" refers to summing zeb_orthos.
+  zeb_collapse <- zeb_mat %>% left_join(ortho_mapping)
+  zeb_collapse <- zeb_collapse %>% group_by(khid) %>%
+  summarize((across(starts_with("DEW"), sum))) %>%
+  select(-khid)
+return(zeb_collapse)
+}
+```
+
+```{r include=TRUE}
+# Collapses to 3766- perfect! 
+subset_8hpf_collapse <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
+subset_10hpf_collapse <- collapse_zeb_mat(subset_10hpf, ortho_mapping)
+subset_14hpf_collapse <- collapse_zeb_mat(subset_14hpf, ortho_mapping)
+subset_18hpf_collapse <- collapse_zeb_mat(subset_18hpf, ortho_mapping)
+subset_24hpf_collapse <- collapse_zeb_mat(subset_24hpf, ortho_mapping)
+```
+
+
+############ GET RID OF KHID COLUMNS (no longer has khid col) ##############
+
+# Helper Function. 
+```{r include=TRUE}
+remove_khid_column <- function(ciona_matrix) {
+  clean_ciona_matrix <- ciona_matrix %>% select(-khid)
+  return(clean_ciona_matrix)
+}
+```
+
+```{r include=TRUE}
+subset_iniG_clean <- remove_khid_column(subset_iniG)
+subset_midG_clean <- remove_khid_column(subset_midG)
+subset_earN_clean <- remove_khid_column(subset_earN)
+subset_latN_clean <- remove_khid_column(subset_latN)
+subset_iniT_clean <- remove_khid_column(subset_iniT)
+subset_earT_clean <- remove_khid_column(subset_earT)
+subset_midT_clean <- remove_khid_column(subset_midT)
+subset_LTB1_clean <- remove_khid_column(subset_LTB1)
+subset_LTB2_clean <- remove_khid_column(subset_LTB2)
+subset_larva_clean <- remove_khid_column(subset_larva)
+```
+
+############# MAKE LISTS (genes x cells) ciona/zeb_list#############
+
+# Helper Function. 
+```{r include=TRUE}
+# REAL: ciona_list = {subset_iniG...}
+ciona_list = list(iniG = subset_iniG_clean,
+                  midG = subset_midG_clean,
+                  earN = subset_earN_clean,
+                  latN = subset_latN_clean,
+                  iniT = subset_iniT_clean,
+                  earT = subset_earT_clean,
+                  midT = subset_midT_clean,
+                  LTB1 = subset_LTB1_clean,
+                  LTB2 = subset_LTB2_clean,
+                  larva = subset_larva_clean)
+```
+
+```{r include=TRUE}
+# REAL: zeb_list = {subset_10hpf...}
+zeb_list = list(zeb_8hpf = subset_8hpf_collapse,
+                zeb_10hpf = subset_10hpf_collapse,
+                zeb_14hpf = subset_14hpf_collapse,
+                zeb_18hpf = subset_18hpf_collapse,
+                zeb_24hpf = subset_24hpf_collapse)
+```
+
+####### GET AVERAGE EXPRESSION MATRICES -> DF FOR EACH SPECIES/TIMEPOINT ciona/zeb_list -> ciona/zeb_av_cols_list -> ciona/zeb_av_col_df #######
+
+# Helper Function. 
+```{r include=TRUE}
+get_av_col <- function(timepoint_expression_mat) {
+  # Get the average expression for each gene. 
+  # genes x iniG cells (3766 x 10k df) -> genes x av_exp (3766 vector)
+  # Each timepoint_av_col will be a column in *_all_timepoint_av_mat 
+  timepoint_av <- timepoint_expression_mat %>% mutate(av_exp = rowMeans(.))
+  timepoint_av_col <- timepoint_av$av_exp
+  return(timepoint_av_col)
+}
+```
+
+# Do for Ciona and Zeb. Each column is an average vector for timepoint.
+```{r include=TRUE}
+ciona_av_cols_list <- map(ciona_list, get_av_col)
+zeb_av_cols_list <- map(zeb_list, get_av_col)
+```
+
+# Make Average Matrices by binding columns from above. 
+```{r include=TRUE}
+ciona_av_col_df <- as.data.frame(do.call(cbind, ciona_av_cols_list))
+zeb_av_col_df <- as.data.frame(do.call(cbind, zeb_av_cols_list))
+```
+
+# Are there any 0's here?
+```{r include=TRUE}
+your_df <- ciona_av_col_df
+```
+
+# Are there any rows with all 0's?
+# Check if there are any 0's
+```{r include=TRUE}
+all_num <- function(your_row, your_num) {
+  # Either find all or any of a number in a row. Returns logical.
+  ifelse (all(your_row == your_num), TRUE, FALSE)
+}
+
+any_num <- function(your_row, your_num) {
+  # Either find all or any of a number in a row. Returns logical.
+  ifelse (any(your_row == your_num), TRUE, FALSE)
+}
+```
+
+
+```{r include=TRUE}
+# Gets logical that describes all the cols with all 0s.
+all_0_cols <- apply(your_df, MARGIN=2, FUN=all_num, your_num=0)
+# Number of cols 
+all_num_0_sum <- sum(all_0_cols)
+all_num_0_sum
+```
+
+############ MAKE GSM MATRICES ciona_av_col_df -> ciona_timepoint_gsm ###########
+
+```{r include=TRUE}
+ciona_timepoint_gsm <- make_gsm(ciona_av_col_df)
+zeb_timepoint_gsm <- make_gsm(zeb_av_col_df)
+```
+
+# Try other gsm function (from batch_on2many_orthology_map_generator.Rmd)- The 2 are identical. 
+```{r include=TRUE}
+test_ciona_gsm <- make_gene_specificity_matrix(ciona_av_col_df)
+```
+
+
+########## GET CORRELATIONS BETWEEN MATRICES ciona/zeb_gsm, zeb/ciona_gsm -> timpepoint_corr_output ###########
+```{r include=TRUE}
+do_correlation <- function(ciona_gsm, zeb_gsm) {
+  corr_output <- corr.test(x= ciona_gsm,
+                           y = zeb_gsm,
+                           method = "spearman",
+                           adjust = "fdr")
+  return(corr_output)
+}
+```
+
+```{r include=TRUE}
+timepoint_corr_output <- do_correlation(ciona_timepoint_gsm, zeb_timepoint_gsm)
+```
+
+############ VISUALIZE #############
+# SPECIFY #
+```{r include=TRUE}
+timepoint_r <- timepoint_corr_output$r
+timepoint_pval <- timepoint_corr_output$p
+```
+
+```{r include=TRUE}
+your_corr_mat <- timepoint_r
+your_pval_mat <- timepoint_pval
+```
+
+# Parameters.
+```{r include=TRUE}
+# Corr legend range. 
+
+min.index <- min(your_corr_mat)
+# max(corR.mat)
+max.index <- max(your_corr_mat)
+leeway <- 0.01
+limits <- c(min.index-leeway, max.index+leeway)
+
+# Aesthetics and labels. 
+your.title <- "Batch-Corrected Similarity Matrix of Zeb 24hpf and Ciona CTs"
+your.xlab <- "Ciona"
+your.ylab <- "Zeb 24hpf"
+your.fill <- "Corr"
+#4388F0, 42B5DD
+your.color <- "#56B273"
+your.face <- "bold"
+```
+
+```{r include=TRUE}
+p <- ggcorrplot(corr = your_corr_mat,
+           p.mat = your_pval_mat)
+```
+
+```{r include=TRUE}
+# angle=45, 90/0
+
+p + scale_fill_gradient2(limit = limits,
+                          low = "#4C7CC4", mid = "white", high = "#BE1E0B") +
+  
+  ggplot2::labs(x = your.xlab, y = your.ylab, title = your.title, fill = your.fill) +
+  
+  ggplot2::theme(plot.title = element_text(size = 10, color = your.color, face = your.face),
+                 axis.title.x = element_text(angle = 0, color = your.color, face = your.face),
+                 axis.title.y = element_text(angle = 90, color = your.color, face = your.face),
+                 axis.text.x = element_text(angle=45, color="black", size=10),
+                 axis.text.y = element_text(angle=45, color="black", size=10),
+                 legend.title = element_text(color = your.color, size = 9),
+                 legend.text = element_text(size = 9)
+  )
+```
+############# FURTHER ANALYSES ##############
+
+ (a) Get # Significant Correlations. 
+ (b) Get Significance between zeb_CT and ciona_CT
+
+```{r include=TRUE}
+num_sig <- sum(your_pval_mat < 0.05)
+num_sig
+
+num_CTs <- ncol(ciona_timepoint_gsm)*ncol(zeb_timepoint_gsm)
+num_CTs
+perc_sig <- num_sig/num_CTs*100
+perc_sig
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############ UNUSED ##############
+
+########### TESTS ################
+# Input: Expression Matrix (Species/Timepoint)
+# Output: Average Matrix
+
+```{r include=TRUE}
+test_df <- data.frame(a = c(1, 2, 3, 4), b = c(4, 5, 6, 4), d = c(2.5, 3, 5, 4))
+test_df
+
+test_df_2 <- data.frame(a = c(1, 2, 5, 6), b = c(4, 5, 3, 4), d = c(2, 6, 7, 3))
+test_df_2
+
+test_df_3 <- data.frame(a = c(1, 2, 3, 4), b = c(5, 6, 7, 8), c = c(9, 10, 11, 12))
+test_df_3
+
+test_df_4 <- data.frame(a = c(1, 5, 6, 4), b = c(10, 1, 3, 8), c = c(9, 1, 2, 3))
+test_df_4
+
+test_df_5 <- data.frame(a = c(1, 5, 10, 5), b = c(10, 1, 2, 8), c = c(9, 1, 2, 4))
+test_df_5
+```
+
+# CORRECT: # Make a column with average expression
+```{r include=TRUE}
+test_list <- list(test_df = test_df,
+                  test_df_2 = test_df_2)
+
+test_list_2 <- list(test_df_3 = test_df_3,
+                    test_df_4 = test_df_4,
+                    test_df_5 = test_df_5)
+
+test_map_ans <- map(test_list, get_av_col)
+test_map_ans_2 <- map(test_list_2, get_av_col)
+```
+
+```{r include=TRUE}
+test_map_ans$test_df
+test_map_ans$test_df_2
+
+test_map_ans_2$test_df_3
+test_map_ans_2$test_df_4
+test_map_ans_2$test_df_5
+```
+"""
+# test_map_ans -> ciona_av_cols_list
+# test_map_ans_2 -> zeb_av_cols_list
+"""
+####### NOW GET PAIRWISE SPEARMANS ########
+ ###########  IMPLEMENTATION 2  #######
+
+```{r include=TRUE}
+do_correlation <- function(ciona_gsm, zeb_gsm) {
+  corr_output <- corr.test(x= ciona_gsm,
+                           y = zeb_gsm,
+                           method = "spearman",
+                           adjust = "fdr")
+  return(corr_output)
+}
+```
+
+
+####### NOW GET PAIRWISE SPEARMANS #######
+ ###########  IMPLEMENTATION 1  #######
+# (1) Make pairwise vectors.
+```{r include=TRUE}
+test_pairwise_list <- cross2(test_map_ans, test_map_ans_2)
+```
+
+# REAL 
+```{r include=TRUE}
+pairwise_list <- cross2(ciona_av_cols_list, zeb_av_cols_list)
+```
+
+# (2) Give informative key names.
+# Helper Function.
+```{r include=TRUE}
+
+give_names <- function(your_list) {
+  name_1 <- your_list[[1]]
+  name_2 <- your_list[[2]]
+  name_flag <- paste0("pair_", name_1, "/", name_2)
+  return(name_flag)
+}
+```
+
+# Get the names
+# CODE TO DO: How to add argument to map...
+```{r include=TRUE}
+test_pairwise_names <- cross2(names(test_list), names(test_list_2))
+test_pairwise_names <- test_pairwise_names %>% map(give_names)
+
+names(test_pairwise_list) <- test_pairwise_names
+```
+
+# REAL 
+```{r include=TRUE}
+pairwise_names <- cross2(names(ciona_list), names(zeb_list))
+pairwise_names <- pairwise_names %>% map(give_names)
+
+names(pairwise_list) <- pairwise_names
+```
+
+# (3) Do Spearman correlations- we want both r and p-value.
+```{r include=TRUE}
+test_av <- test_map_ans$test_df
+test_av_3 <- test_map_ans_2$test_df_3
+test_av_4 <- test_map_ans_2$test_df_4
+```
+
+```{r include=TRUE}
+test_cor_13 <- corr(test_av, test_av_3, method=)
+```
+
+########### TESTS ################
+# Input: Expression Matrix (Species/Timepoint)
+# Output: Average Matrix
+
+```{r include=TRUE}
+test_df <- data.frame(a = c(1, 2, 3, 4), b = c(4, 5, 6, 4), d = c(2.5, 3, 5, 4))
+test_df
+
+test_df_2 <- data.frame(a = c(1, 2, 5, 6), b = c(4, 5, 3, 4), d = c(2, 6, 7, 3))
+test_df_2
+```
+
+# CORRECT: # Make a column with average expression
+```{r include=TRUE}
+# Make a column with average expression
+test_df_av <- test_df %>% mutate(av_exp = rowMeans(.))
+test_df_av
+
+test_df_av_2 <- test_df_2 %>% mutate(av_exp = rowMeans(.))
+test_df_av_2
+```
+
+# CORRECT: # Divide all other columns with this average -> get the column
+```{r include=TRUE}
+# Divide all other columns with this average 
+test_df_av_col <- test_df_av$av_exp
+test_df_av_col
+
+test_df_av_col_2 <- test_df_av_2$av_exp
+test_df_av_col_2
+```
+
+# WANT THIS: Helper Function
+```{r include=TRUE}
+get_av_col <- function(timepoint_expression_mat) {
+  # Get the average expression for each gene. 
+  # genes x iniG cells (3766 x 10k df) -> genes x av_exp (3766 vector)
+  # Each timepoint_av_col will be a column in *_all_timepoint_av_mat 
+  timepoint_av <- timepoint_expression_mat %>% mutate(av_exp = rowMeans(.))
+  timepoint_av_col <- timepoint_av$av_exp
+  return(timepoint_av_col)
+}
+```
+
+```{r include=TRUE}
+get_av_col(test_df)
+get_av_col(test_df_2)
+```
+
+# Test list
+```{r include=TRUE}
+test_list <- list(test_df = test_df,
+             test_df_2 = test_df_2)
+
+test_map_ans <- map(test_list, get_av_col)
+```
+
+# Real Test: iniG
+```{r include=TRUE}
+# 201
+test_iniG <- subset_iniG_clean
+# 202
+test_iniG_2 <- test_iniG %>% mutate(av_expression = rowMeans(.)) %>%
+  select(av_expression)
+
+test_ans <- test_iniG_2$av_expression
+# test_ans
+```
+
+```{r include=TRUE}
+av_col_test <- get_av_col(test_iniG)
+# av_col_test
+```
+
+```{r include=TRUE}
+sum(test_ans == av_col_test)
+```
+# Do for all. 
+```{r include=TRUE}
+ciona_av_cols_list <- map(ciona_list, get_av_col)
+zeb_av_cols_list <- map(zeb_list, get_av_col)
+```
+
+############### UNUSED #################
+
+# The last column (has averages), rest has the numbers.
+```{r include=TRUE}
+# 3766 x 1
+test_last <- test_iniG_2 %>% select(last_col())
+# Smarter way to do this? 
+# 201
+test_all <- test_iniG_2 %>% select(!last_col())
+
+test_last
+test_all
+
+test_divided <- test_all/test_last
+test_divided
+```
+# Make sure that the mean of the row in test_all == test_last
+```{r include=TRUE}
+test_row <- as.numeric(test_all[1, ])
+mean(test_row)
+as.numeric(test_last[1, ])
+
+mean(as.numeric(test_iniG[1, ]))
+```
+
+
+```{r include=TRUE}
+test_df <- data.frame(a = c(1, 2, 3, 4), b = c(4, 5, 6, 4), d = c(2.5, 3, 5, 4))
+test_df
+```
+
+# CORRECT: # Make a column with average expression
+```{r include=TRUE}
+# Make a column with average expression
+test_df_av <- test_df %>% mutate(av_exp = rowMeans(.))
+test_df_av
+```
+# CORRECT: # Divide all other columns with this average -> GSM
+```{r include=TRUE}
+# Divide all other columns with this average 
+test_num_timepoints <- ncol(test_df_av)-1
+test_gsm <- test_df_av[, 1:test_num_timepoints]/test_df_av[, test_num_timepoints+1]
+test_gsm
+
+```
+```{r include=TRUE}
+test_df_check <- make_gsm(test_df)
+test_df_check
+```
+
+
+# Try for 1 row
+```{r include=TRUE}
+check_same(test_iniG[200, ])
+```
+
+# Check for all rows.
+```{r include=TRUE}
+sapply(test_df, check_same(test_df))
+```
+
+

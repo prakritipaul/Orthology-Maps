@@ -17,7 +17,54 @@ library(psych)
 library(reshape2)
 ```
 
+
+##########   WE NEED TO UNDERSTAND HOW TO DEAL WITH ZEB DUPLICATES  #########
+
+# Ortho khids and zeb_genes.
+```{r include=TRUE}
+# 4363 (correct, as expected).
+ortho_khids <- unique(ortho_mapping$khid)
+
+# 8548 -> 6490 => There are 1-1 AND many-1 orthologs (ciona -> zeb).
+ortho_zeb_genes <- ortho_mapping$zeb_gene
+```
+
+```{r include=TRUE}
+# This is a dataframe with zeb_genes that have 1-1 and 1-many orthologs. (U)
+# 5490 
+unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>%
+  filter(num == 1)
+
+unique_ortho_zeb_genes <- unique_zeb_gene_df$zeb_gene
+
+# This dataframe has many-1 orthologs. (NU)
+# 1000
+not_unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>%
+  filter(!num == 1)
+
+```
+```{r include=TRUE}
+# These are the khids that correspond to zeb_genes in U. 
+# There will be repeats because there are 1 KHID -> multiple zeb_genes cases.   
+# 5490
+corr_khid_U <- ortho_mapping %>% filter(zeb_gene %in% unique_ortho_zeb_genes)
+# 3766
+corr_khids <- unique(corr_khid_U$khid)
+
+# When we use these khids in ortho_dict, we should see the number of zeb_genes is 1 or > 1. Yes!
+# 3766
+corr_khid_string_df <- ortho_dict %>% filter(khid %in% corr_khids)
+corr_khid_strings <- corr_khid_string_df$khid
+```
+
+
+
+
+
+
+
 ############ STEP 1 #############
+
 # Make the appropriate test variables.
 # REAL: "ortho_mapping"
 ```{r include=TRUE}
@@ -44,8 +91,8 @@ test_ortho_mapping <- ortho_mapping %>% filter(khid %in% test_ortho_khids)
 test_ortho_zeb_genes <- test_ortho_mapping$zeb_gene
 ```
 
-############ PART 2 ############
-# TEST: Make and munge test_mats.
+############ MAKE AND MUNGE test_mats ############
+
 # Helper Function. 
 ```{r include=TRUE}
 modify_mat <- function(mat, subset_genes, col_rowname) {
@@ -73,9 +120,8 @@ test_10hpf <- modify_mat(zeb_10hpf_noto_mat[, 1:5], test_ortho_zeb_genes, "zeb_g
 test_14hpf <- modify_mat(zeb_14hpf_noto_mat[, 1:5], test_ortho_zeb_genes, "zeb_gene")
 ```
 
-############# PART 3 #############
-# You want to "collapse" the zeb_mats. 
-
+############# COLLAPSE ZEB MATS -> timepoint*_collapse #############
+ 
 # Helper Function.  
 ```{r include=TRUE}
 collapse_zeb_mat <- function(zeb_mat, ortho_mapping) {
@@ -94,7 +140,7 @@ test_10hpf_collapse <- collapse_zeb_mat(test_10hpf, test_ortho_mapping)
 test_14hpf_collapse <- collapse_zeb_mat(test_14hpf, test_ortho_mapping)
 ```
 
-############ PART 4 ##############
+############ GET RID OF KHID COLUMNS IN ciona_matrices -> ##############
 # You also want to get rid of the khid columns in the Ciona Matrices.
 
 ```{r include=TRUE}
