@@ -3,11 +3,29 @@ title: "notoXnoto"
 output: html_document
 ---
 
+```{r include=TRUE}
+test <- cells.subcluster
+test_names <- test@data@Dimnames[[2]]
+test_split <- str_split(test_names, "_")
+
+get_name <- function(your_string) {
+  timepoint <- your_string[1]
+  return(timepoint)
+}
+
+ans <- map_chr(test_split, get_name)
+```
+
+```{r include=TRUE}
+unique(ans)
+```
+
 # Point of this Script:
 # (1) Get min_n_features for each timepoint. 
-# (2) Save raw matrices in an Renv that will be used in gencomp.
+# (2) Save raw matrices in an Renv that will be used in gencomp (gencomp_ciona_notoXnoto_ciona_notoXnoto_INPUT_matrices.RData_matrices.RData).
 # (3) Also explore outputs of gencomp = Ensure batch correction worked. 
 # (4) Batch-corrected data matrices were found for each Ciona timepoint.
+# (5) "all_ciona_notoXnoto_khids.csv"
 # 
 # "DONE 1" means that min_n_features for a timepoint was catalogued in gencomp Rscript
 #        to make Seurat object 
@@ -15,6 +33,22 @@ output: html_document
 #   "notoXnoto_larva_seurat.rds"
 #
 # "DONE 2" means that Batch Correction was visually validated.
+
+(1) iniG1_dir, iniG2_dir -> iniG1_matrix, iniG2_matrix.
+(2) iniG1_matrix -> iniG1_matrix_seurat, iniG2_matrix_seurat 
+-NOTE: Aggregate files for LTB1 and LTB2 were used to make their matrix_seurats. 
+(3) Batch correction was validated.
+(4) Batch-corrected data matrices and noto cells were extracted.
+
+LTB2_seurat <- notoXnoto_seurat
+LTB2_mat <- notoXnoto_seurat@assays$integrated@data
+LTB2_noto_cells <- WhichCells(notoXnoto_seurat, idents = notoXnoto_idents)
+LTB2_noto_mat <- LTB2_mat[, LTB2_noto_cells]
+
+(5) khids in common in all timepoints were found.
+all_ciona_notoXnoto_khid_list {rownames(iniG_noto_mat...}) -> "all_ciona_notoXnoto_khids.csv"
+# 11401
+all_ciona_notoXnoto_khids <- Reduce(intersect, all_ciona_notoXnoto_khid_list)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

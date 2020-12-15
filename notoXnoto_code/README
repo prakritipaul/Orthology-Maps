@@ -1,0 +1,94 @@
+README
+notoXnoto_code directory 
+
+(*) "get_notoXnoto_orthos.py"
+Given all_ciona_notoXnoto_khids (generated in "ciona_notoXnoto.Rmd") and all_zeb_notoXnoto_genes (generated in "zeb_notoXnoto.Rmd")- these are khids/zeb_genes that are the intersection of genes present in all timepoint matrices.
+
+Script finds common 1-1 and 1-many orthologs.
+
+Makes:
+(1) "export_qualified_one2one_many_notoxnoto_dict.csv" 
+	{KH2012:KH.C11.313,foxa2 foxa}
+	This actually gets used in the notoXnoto pipelines.
+
+(2) "qualified_one2one_many_notoxnoto_dict.csv"
+	{"KH2012:KH.C11.313","['foxa2', 'foxa']"
+	This does not.
+
+Note: This code is adapted from get_batch_orthos.py
+
+####################################
+
+(*) "zeb_notoXnoto.Rmd"
+-Clear description at beginning of the script.
+-Purpose is to generate "all_zeb_notoXnoto_genes.csv", which is the intersection of zeb_genes expressed in all timepoints.
+-Note: there was an issue with 8hpf timepoint after fixing it and 18hpf (12/3).
+-The removal of 3 genes occurs in both "notoXnoto_pipeline_median.Rmd" "notoXnoto_pipeline_average.Rmd". # unique_ortho_zeb_genes (5487)
+
+####################################
+
+(*) "ciona_notoX_noto.Rmd"
+(1) iniG1_dir, iniG2_dir -> iniG1_matrix, iniG2_matrix.
+(2) iniG1_matrix -> iniG1_matrix_seurat, iniG2_matrix_seurat 
+-NOTE: Aggregate files for LTB1 and LTB2 were used to make their matrix_seurats. 
+(3) Batch correction was validated.
+(4) Batch-corrected data matrices and noto cells were extracted.
+
+LTB2_seurat <- notoXnoto_seurat
+LTB2_mat <- notoXnoto_seurat@assays$integrated@data
+LTB2_noto_cells <- WhichCells(notoXnoto_seurat, idents = notoXnoto_idents)
+LTB2_noto_mat <- LTB2_mat[, LTB2_noto_cells]
+
+(5) all_ciona_notoXnoto_khid_list {rownames(iniG_noto_mat...}) -> "all_ciona_notoXnoto_khids.csv"
+# 11401
+all_ciona_notoXnoto_khids <- Reduce(intersect, all_ciona_notoXnoto_khid_list)
+
+####################################
+
+NOTE: Basically all the code is identical between _average and _median, just the gsm'ed matrix lists are different.
+
+####################################
+
+(*) "notoXnoto_pipeline_median.Rmd"
+
+-Here, the presence of many-1 ciona -> zeb orthologs were detected. 
+-ortho_khids -> corr_khids, unique_ortho_zeb_genes updated.
+(1) subset_iniG <- modify_mat(iniG_noto_mat, corr_khids, "khid")
+(2) subset_8hpf <- modify_mat(zeb_8hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+
+(1) subset_iniG_clean = iniG_noto_mat, corr_khids, "khid"
+(2) ciona_list {key:iniG, value:subset_iniG_clean}
+(3) ciona_list -> ciona_removed list 
+-Each value of ciona_removed_list is a dataframe with khids that are not expressed in any of the cells across all timepoints in both species. 
+-ciona_removed_list is the same as ciona_list_gsm {key:iniG, value:df of khid x cells}
+(4) ciona_removed_list -> ciona_list_gsm {key:iniG, value:df (2897 x num_cells)}
+-ciona_list_gsm has the same list structure as ciona_removed_list
+(5) cross_gsm <- cross2(ciona_list_gsm, zeb_list_gsm)
+cross_gsm: {key:gsm_iniG/zeb_8hpf, value:gsm_ciona_df and gsm_zeb_df}
+(6) cross_gsm -> gsm_corrs -> sig_corrs -> medians
+-gsm_corrs and sig_corrs have the same list structure as cross_gsm
+-medians is a numeric with sig_corrs.
+
+-gsm_corrs <- map(cross_gsm, do_correlation)
+-I also get sig_corrs (significant median values) 
+
+(6) Downstream Plots
+-Medians with (heatmap_mat) and without (m) significant correlations. 
+
+####################################
+
+(*) "notoXnoto_pipeline_average.Rmd"
+(1) ciona_list {key:iniG, value:3765 x num_cells} -> ciona_av_cols_list {key:iniG, value:average vector of length 3765}
+(2) ciona_av_cols_list -> ciona_av_col_df (3765 x 10 df- one for each timepoint)
+-Note: I check if there are any 0 cells or genes- no! 
+(3) ciona_av_col_df -> ciona_timepoint_gsm
+-ciona_timepoint_gsm has same structure as ciona_av_col_df. 
+-Note: ciona_timepoint_gsm uses make_gsm function which test_ciona_gsm uses make_gene_specificity_matrix- outputs are the same. This was to validate that the newer implementation (make_gsm) was correct- it is! 
+(4) ciona_timepoint_gsm -> timepoint_corr_output (output of corr.test. Only 1 item.) 
+
+(5) Downstream Plot (p)
+
+
+
+
+

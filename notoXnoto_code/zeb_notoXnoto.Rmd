@@ -5,8 +5,19 @@ output: html_notebook
 
 # Purpose of Script: 
 # Part 1: Cluster and ID noto cells at each timepoint: 8, 10, 14, 18. 
-#     Note: We already have 24hpf information from gencomp/zeb_integrated_50/mod.zeb.cell.type.list
-# Part 2: Get Noto Cells (*_noto_cells) and Data Matrices (*_noto_mat)
+#     Note: We already have 24hpf information from gencomp/zeb_integrated_50/mod.zeb.cell.type.list. 
+#           It is batch-corrected unlike the matrices of other timepoints. 
+
+# Part 2: Get Noto Cells and Data Matrices. Noto cell ID is validated against wagner_degs.
+
+# Part 3: Export intersection of zeb_genes as "all_zeb_notoXnoto_genes.csv"
+
+# zeb_8hpf_dir -> zeb_8_hpf_df -> zeb_8hpf_seurat -> zeb_8hpf_noto_cells, zeb_8hpf_noto_mat (contains data from @assays$RNA@data)
+# all_zeb_notoXnoto_gene_list = list(zeb_8hpf_noto_mat) -> all_zeb_notoXnoto_genes (24155) -> "all_zeb_notoXnoto_genes.csv"
+
+# 24hpf noto matrices were extracted from ~/princeton_google_drive/Levine Lab/R_Environments/Orthology-Maps_R_Environments/orthology_map_batch_correction
+
+# THERE WAS AN ISSUE WITH ZEB_8/18HPF_NOTO_MATS! Fixed 12/3/20.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -124,9 +135,13 @@ make_zeb_seurat <- function(zeb_df, min_cells, min_features, n_features, zeb_pca
 ```{r include=TRUE}
 zeb_8hpf_seurat <- make_zeb_seurat(zeb_8hpf_df, 3, 200, 2000, 20)
 ```
+
 ```{r include=TRUE}
 zeb_10hpf_seurat <- make_zeb_seurat(zeb_10hpf_df, 3, 200, 2000, 20)
 zeb_14hpf_seurat <- make_zeb_seurat(zeb_14hpf_df, 3, 200, 2000, 20)
+```
+
+```{r include=TRUE}
 zeb_18hpf_seurat <- make_zeb_seurat(zeb_18hpf_df, 3, 200, 2000, 20)
 ```
 
@@ -210,7 +225,10 @@ FeaturePlot(object = your_seurat,
             reduction = "umap",
             label = TRUE)
 ```
-
+```{r include=TRUE}
+# Checking if anything sketchy happened when I re-did 8hpf matrix. 
+test_noto <- WhichCells(your_seurat, idents = 10)
+```
 """
   Validate Clusters
     Note: I am using Wilcox Test vs. Wagner MAST
@@ -258,6 +276,17 @@ length(common_degs)
 ```{r include=TRUE}
 your_mat <- your_seurat@assays$RNA@data
 your_noto_mat <- your_mat[, your_noto_cells]
+```
+# 12/3: Fixed zeb_8hpf_noto_mat. 
+```{r include=TRUE}
+mat_8hpf <- zeb_8hpf_seurat@assays$RNA@data
+zeb_8hpf_noto_mat <- mat_8hpf[, zeb_8hpf_noto_cells]
+```
+
+# 12/3: Fixed zeb_18hpf_noto_mat.
+```{r include=TRUE}
+mat_18HPF <- zeb_18hpf_seurat@assays$RNA@data
+zeb_18hpf_noto_mat <- mat_18HPF[, zeb_18hpf_noto_cells]
 ```
 
 # (2) Save noto cells and noto_mat.

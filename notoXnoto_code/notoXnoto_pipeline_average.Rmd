@@ -3,14 +3,24 @@ title: "notoXnoto_pipeline_average"
 output: html_document
 ---
 
+(1) ciona_list {key:iniG, value:3765 x num_cells} -> ciona_av_cols_list {key:iniG, value:average vector of length 3765}
+(2) ciona_av_cols_list -> ciona_av_col_df (3765 x 10 df- one for each timepoint)
+-Note: I check if there are any 0 cells or genes- no! 
+(3) ciona_av_col_df -> ciona_timepoint_gsm
+-ciona_timepoint_gsm has same structure as ciona_av_col_df. 
+-Note: ciona_timepoint_gsm uses make_gsm function which test_ciona_gsm uses make_gene_specificity_matrix- outputs are the same. This was to validate that the newer implementation (make_gsm) was correct- it is! 
+(4) ciona_timepoint_gsm -> timepoint_corr_output (output of corr.test. Only 1 item.) 
+
+(5) Downstream Plot (p)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r include=FALSE}
-library(Seurat)
 library(tidyverse)
 library(stringr)
+library(Seurat)
 library(ggplot2)
 library(Matrix)
 library(ggcorrplot)
@@ -21,7 +31,7 @@ library(psych)
 # Make the appropriate test variables.
 # REAL: "ortho_mapping"
 ```{r include=TRUE}
-ortho_dict <- read.table("/home/pprakriti/Desktop/export_qualified_one2one_many_notoxnoto_dict.csv",
+ortho_dict <- read.table("/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/notoXnoto/pipeline_related/pipeline_csvs/export_qualified_one2one_many_notoxnoto_dict.csv",
                          sep = ",",
                          header = FALSE,
                          stringsAsFactors = FALSE)
@@ -29,14 +39,6 @@ colnames(ortho_dict) <- c("khid", "zeb_gene")
 
 ortho_mapping <- ortho_dict %>%
    separate_rows(zeb_gene, sep = " ")
-```
-
-# There was an error in 8hpf and 18hpf noto_matrices.
-```{r include=TRUE}
-# 103 
-zeb_8hpf_noto_mat <- zeb_8hpf_df[, zeb_8hpf_noto_cells]
-# 59
-zeb_18hpf_noto_mat <- zeb_18hpf_df[, zeb_18hpf_noto_cells]
 ```
 
 ##########   RESOLVED: WE NEED TO UNDERSTAND HOW TO DEAL WITH ZEB DUPLICATES  #########
@@ -50,19 +52,40 @@ ortho_khids <- unique(ortho_mapping$khid)
 ortho_zeb_genes <- ortho_mapping$zeb_gene
 ```
 
+################ DO NOT TOUCH ##################
+
 ```{r include=TRUE}
 # This is a dataframe with zeb_genes that have 1-1 and 1-many orthologs. (U)
-# 5490 
-unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>%
-  filter(num == 1)
+# 6490 
+
+unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>% dplyr::filter(num==1)
+colnames(unique_zeb_gene_df)
+```
+################ DO NOT TOUCH ##################
+
+```{r include=TRUE}
 # 5490
 unique_ortho_zeb_genes <- unique_zeb_gene_df$zeb_gene
+```
 
+################ DO NOT TOUCH ##################
+
+```{r include=TRUE}
+# I know I am doing something very hacky, but... 8hpf doesn't have 3 genes
+# so I'm going to remove them...
+noto_genes_8hpf <- rownames(zeb_8hpf_noto_mat)
+# 3
+not_in_genes_8hpf <- setdiff(unique_ortho_zeb_genes, noto_genes_8hpf)
+# 5487
+unique_ortho_zeb_genes <- intersect(unique_ortho_zeb_genes, noto_genes_8hpf)
+```
+
+```{r include=TRUE}
 # These are the khids that correspond to zeb_genes in U. 
 # There will be repeats because there are 1 KHID -> multiple zeb_genes cases.   
-# 5490
-corr_khid_U <- ortho_mapping %>% filter(zeb_gene %in% unique_ortho_zeb_genes)
-# 3766
+# 5487
+corr_khid_U <- ortho_mapping %>% dplyr::filter(zeb_gene %in% unique_ortho_zeb_genes)
+# 3765
 corr_khids <- unique(corr_khid_U$khid)
 ```
 
@@ -73,7 +96,7 @@ corr_khids <- unique(corr_khid_U$khid)
 modify_mat <- function(mat, subset_genes, col_rowname) {
   # Munges Matrix of batch-corrected values from noto_mats (mat) into a dataframe with 
   # rownames of khids/zeb_genes (mod_mat). Its column name is col_rowname = khid/zeb_gene.
-  # subset_genes = ortho_khids/ortho_zeb_genes.
+  # subset_genes = corr_khids/unique_ortho_zeb_genes.
   mod_mat <- as.data.frame(mat[subset_genes, ])
   mod_mat[[col_rowname]] <- rownames(mod_mat)
   return(mod_mat)
@@ -82,7 +105,8 @@ modify_mat <- function(mat, subset_genes, col_rowname) {
 
 # Do for Ciona.
 ```{r include=TRUE}
-# REAL: subset_iniG <- modify_mat(iniG_noto_mat, ortho_khids, "khid")
+# Has khid column- NOT alpha'ly ordered.
+# 3765 x 202 
 subset_iniG <- modify_mat(iniG_noto_mat, corr_khids, "khid")
 subset_midG <- modify_mat(midG_noto_mat, corr_khids, "khid")
 subset_earN <- modify_mat(earN_noto_mat, corr_khids, "khid")
@@ -97,7 +121,8 @@ subset_larva <- modify_mat(larva_noto_mat, corr_khids, "khid")
 
 # Do for Zeb.
 ```{r include=TRUE}
-# REAL: subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, ortho_zeb_genes, "zeb_gene")
+# Has zeb_gene column- YES alpha'ly ordered.
+# 5487 x 104
 subset_8hpf <- modify_mat(zeb_8hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
 subset_10hpf <- modify_mat(zeb_10hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
 subset_14hpf <- modify_mat(zeb_14hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
@@ -110,18 +135,40 @@ subset_24hpf <- modify_mat(zeb_24hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene
 # Helper Function.  
 ```{r include=TRUE}
 collapse_zeb_mat <- function(zeb_mat, ortho_mapping) {
+  # Example of zeb_mat: subset_8hpf 4 x 4 
   # zeb_mat (n_zeb_genes x cells + zeb_gene) + ortho_mapping -> 
   # zeb_collapse (n_khids, cells). "Collapse" refers to summing zeb_orthos.
+  
+  # 4 x 5 (you gain a khid column)
   zeb_collapse <- zeb_mat %>% left_join(ortho_mapping)
-  zeb_collapse <- zeb_collapse %>% group_by(khid) %>%
-  summarize((across(starts_with("DEW"), sum))) %>%
-  select(-khid)
-return(zeb_collapse)
+  rownames(zeb_collapse) <- rownames(zeb_mat)
+  
+  # For each cell, add up orthologs. 
+  # 3 X 4 (you add up orthologs (4 -> 3) and lose zeb_gene column (5 -> 4)) 
+  # KHIDS ARE ALPHA'LY ORDERED!
+  zeb_collapse_2 <- zeb_collapse %>% dplyr::group_by(khid) %>%
+    dplyr::summarize(across(starts_with("DEW"), sum))
+  
+  zeb_rownames <- zeb_collapse_2$khid
+  
+  # 3 x 3 (get rid of the khid column)
+  zeb_collapse_3 <- zeb_collapse_2 %>% select(-khid)
+  # Retain the khid names! These ARE alpha'ly ordered!!!   
+  zeb_collapse_3 <- as.data.frame(zeb_collapse_3)
+  rownames(zeb_collapse_3) <- zeb_rownames
+
+return(zeb_collapse_3)
 }
 ```
 
 ```{r include=TRUE}
-# Collapses to 3766- perfect! 
+test_fn <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
+```
+
+# Real 
+```{r include=TRUE}
+# Collapses to 3765- perfect! 
+# 3765 x 103 
 subset_8hpf_collapse <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
 subset_10hpf_collapse <- collapse_zeb_mat(subset_10hpf, ortho_mapping)
 subset_14hpf_collapse <- collapse_zeb_mat(subset_14hpf, ortho_mapping)
@@ -135,12 +182,22 @@ subset_24hpf_collapse <- collapse_zeb_mat(subset_24hpf, ortho_mapping)
 # Helper Function. 
 ```{r include=TRUE}
 remove_khid_column <- function(ciona_matrix) {
-  clean_ciona_matrix <- ciona_matrix %>% select(-khid)
+  # Example: ciona_matrix = subset_iniG
+  # First sort rows alphabetically. Then remove khid column. 
+  ciona_matrix_sorted <- ciona_matrix %>% arrange(khid)
+  clean_ciona_matrix <- ciona_matrix_sorted %>% select(-khid)
   return(clean_ciona_matrix)
 }
 ```
 
+# Debugging
+# test_iniG_clean ~ subset_iniG_clean 
 ```{r include=TRUE}
+test_rem_fn <- remove_khid_column(subset_iniG)
+```
+
+```{r include=TRUE}
+# 3765 x 201 
 subset_iniG_clean <- remove_khid_column(subset_iniG)
 subset_midG_clean <- remove_khid_column(subset_midG)
 subset_earN_clean <- remove_khid_column(subset_earN)
@@ -258,7 +315,7 @@ do_correlation <- function(ciona_gsm, zeb_gsm) {
 ```
 
 ```{r include=TRUE}
-timepoint_corr_output <- do_correlation(ciona_timepoint_gsm, zeb_timepoint_gsm)
+timepoint_corr_output <- do_correlation(zeb_timepoint_gsm, zeb_timepoint_gsm)
 ```
 
 ############ VISUALIZE #############
@@ -284,9 +341,9 @@ leeway <- 0.01
 limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
-your.title <- "Batch-Corrected Similarity Matrix of Zeb 24hpf and Ciona CTs"
-your.xlab <- "Ciona"
-your.ylab <- "Zeb 24hpf"
+your.title <- "Notochord Time-course Similarity"
+your.xlab <- "Zeb"
+your.ylab <- "Zeb"
 your.fill <- "Corr"
 #4388F0, 42B5DD
 your.color <- "#56B273"
@@ -346,6 +403,77 @@ perc_sig
 
 
 ############ UNUSED ##############
+
+### TESTING NEW collapse_zeb_mat function BECAUSE KHIDS ARE IN ALPHA'LY ORDER! 
+```{r include=TRUE}
+test_fn <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
+```
+
+# Debugging -> Collapse 8hpf Zeb
+# test_collapse_3 ~ subset_8hpf_collapse
+```{r include=TRUE}
+test_subset <- subset_8hpf
+test_collapse <- test_subset %>% left_join(ortho_mapping)
+# ADD THIS LINE LATER
+rownames(test_collapse) <- rownames(test_subset)
+
+test_collapse_2 <- test_collapse %>% dplyr::group_by(khid) %>%
+  dplyr::summarize(across(starts_with("DEW"), sum))
+
+# ADD THIS LINE LATER! 
+test_rownames <- test_collapse_2$khid
+
+# 3 x 3 (you get rid of the khid column)
+test_collapse_3 <- test_collapse_2 %>% select(-khid)
+# LINE BELOW IS VIMP! ADD.  
+test_collapse_3 <- as.data.frame(test_collapse_3)
+rownames(test_collapse_3) <- test_rownames
+```
+
+# Debugging -> Collapse Zeb (small)
+```{r include=TRUE}
+# 4 X 4 (you have a zeb_gene column)
+test_small_subset <- data.frame(cell_1 = c(1, 2, 3, 4), cell_2 = c(1, 3, 5, 3), cell_3 = c(5, 6, 7, 4))
+rownames(test_small_subset) <- c("zic1", "ddit4", "foxa2", "foxa")
+test_small_subset$zeb_gene <- rownames(test_small_subset) 
+
+# 4 X 5 (you gain a khid column)
+test_small_collapse <- test_small_subset %>% left_join(ortho_mapping)
+# ADD THIS LINE LATER
+rownames(test_small_collapse) <- rownames(test_small_subset)
+
+# 3 X 4 (you lose the zeb_column, and you get new values where orthologs are added up)
+test_small_collapse_2 <- test_small_collapse %>% dplyr::group_by(khid) %>%
+  dplyr::summarize(across(starts_with("cell"), sum))
+
+# ADD THIS LINE LATER! 
+test_small_rownames <- test_small_collapse_2$khid
+
+# 3 x 3 (you get rid of the khid column)
+test_small_collapse_3 <- test_small_collapse_2 %>% select(-khid)
+rownames(test_small_collapse_3) <- test_small_rownames
+```
+
+
+# Debugging -> Collapse Zeb 10hpf- same order of genes- good. 
+```{r include=TRUE}
+test_subset_10 <- subset_10hpf
+test_collapse_10 <- test_subset_10 %>% left_join(ortho_mapping)
+# ADD THIS LINE LATER
+rownames(test_collapse_10) <- rownames(test_subset_10)
+
+test_collapse_2_10 <- test_collapse_10 %>% dplyr::group_by(khid) %>%
+  dplyr::summarize(across(starts_with("DEW"), sum))
+
+# ADD THIS LINE LATER! 
+test_rownames_10 <- test_collapse_2_10$khid
+
+# 3 x 3 (you get rid of the khid column)
+test_collapse_3_10 <- test_collapse_2_10 %>% select(-khid)
+# LINE BELOW IS VIMP! ADD.  
+test_collapse_3_10 <- as.data.frame(test_collapse_3_10)
+rownames(test_collapse_3_10) <- test_rownames_10
+```
 
 ########### TESTS ################
 # Input: Expression Matrix (Species/Timepoint)
@@ -603,4 +731,26 @@ check_same(test_iniG[200, ])
 sapply(test_df, check_same(test_df))
 ```
 
+############# TRYING TO UNDERSTAND WHY MEAN AND MEDIAN NUMBERS ARE SO DIFFERENT ################
 
+# Doing for iniG 
+```{r include=TRUE}
+test_iniG_average <- ciona_av_col_df$iniG
+test_iniG_all_cells <- ciona_removed_list$iniG
+
+# Sanity check that my cell expression inputs is correct. 
+test_iniG_average_removed <- apply(test_iniG_all_cells, FUN = mean, MARGIN = 1)
+```
+
+```{r include=TRUE}
+# In the average case, I get the average and then gsm it.
+test_iniG_gsm <- ciona_timepoint_gsm$iniG
+
+# Is this the same as gsm(all cells), then take average? No! 
+test_iniG_all_gsm <- make_gsm(test_iniG_all_cells) 
+test_iniG_all_gsm_mean <- apply(test_iniG_all_gsm, FUN = mean, MARGIN = 1)
+
+test_8hpf_all_cells <- zeb_removed_list$zeb_8hpf
+test_8hpf_all_gsm <- make_gsm(test_8hpf_all_cells) 
+test_8hpf_all_gsm_mean <- apply(test_8hpf_all_gsm, FUN = mean, MARGIN = 1)
+```

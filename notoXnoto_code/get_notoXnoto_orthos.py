@@ -6,6 +6,15 @@
 
 	Script finds common 1-1 and 1-many orthologs.
 
+	Makes:
+	(1) "export_qualified_one2one_many_notoxnoto_dict.csv" 
+		"KH2012:KH.C11.313","foxa2 foxa"
+		This actually gets used in the notoXnoto pipelines.
+
+	(2) "qualified_one2one_many_notoxnoto_dict.csv"
+		"KH2012:KH.C11.313","['foxa2', 'foxa']"
+		This does not.
+
 	Notes: 
 		1. This code is adapted from get_batch_orthos.py
 

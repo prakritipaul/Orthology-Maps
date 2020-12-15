@@ -2,6 +2,30 @@
 title: "notoXnoto_pipeline"
 output: html_document
 ---
+-Here, the presence of many-1 ciona -> zeb orthologs were detected. 
+-ortho_khids -> corr_khids, unique_ortho_zeb_genes updated.
+(1) subset_iniG <- modify_mat(iniG_noto_mat, corr_khids, "khid")
+(2) subset_8hpf <- modify_mat(zeb_8hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene")
+
+(1) subset_iniG_clean = iniG_noto_mat, corr_khids, "khid"
+(2) ciona_list {key:iniG, value:subset_iniG_clean}
+(3) ciona_list -> ciona_removed list 
+-Each value of ciona_removed_list is a dataframe with khids that are not expressed in any of the cells across all timepoints in both species. 
+-ciona_removed_list is the same as ciona_list_gsm {key:iniG, value:df of khid x cells}
+(4) ciona_removed_list -> ciona_list_gsm {key:iniG, value:df (2897 x num_cells)}
+-ciona_list_gsm has the same list structure as ciona_removed_list
+(5) cross_gsm <- cross2(ciona_list_gsm, zeb_list_gsm)
+cross_gsm: {key:gsm_iniG/zeb_8hpf, value:gsm_ciona_df and gsm_zeb_df}
+(6) cross_gsm -> gsm_corrs -> sig_corrs -> medians
+-gsm_corrs and sig_corrs have the same list structure as cross_gsm
+-medians is a numeric with sig_corrs.
+
+
+-gsm_corrs <- map(cross_gsm, do_correlation)
+-I also get sig_corrs (significant median values) 
+
+(6) Downstream Plots
+-Medians with (heatmap_mat) and without (m) significant correlations. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -31,11 +55,6 @@ ortho_mapping <- ortho_dict %>%
    separate_rows(zeb_gene, sep = " ")
 ```
 
-# There was an error in 8hpf and 18hpf noto_matrices.
-```{r include=TRUE}
-zeb_8hpf_noto_mat <- zeb_8hpf_df[, zeb_8hpf_noto_cells]
-zeb_18hpf_noto_mat <- zeb_18hpf_df[, zeb_18hpf_noto_cells]
-```
 
 ##########   RESOLVED: WE NEED TO UNDERSTAND HOW TO DEAL WITH ZEB DUPLICATES  #########
 
@@ -55,12 +74,24 @@ unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n
   filter(num == 1)
 # 5490
 unique_ortho_zeb_genes <- unique_zeb_gene_df$zeb_gene
+```
 
+```{r include=TRUE}
+# I know I am doing something very hacky, but... 8hpf doesn't have 3 genes
+# So I'm going to remove them...
+noto_genes_8hpf <- rownames(zeb_8hpf_noto_mat)
+# 3
+not_in_genes_8hpf <- setdiff(unique_ortho_zeb_genes, noto_genes_8hpf)
+# 5487
+unique_ortho_zeb_genes <- intersect(unique_ortho_zeb_genes, noto_genes_8hpf)
+```
+
+```{r include=TRUE}
 # These are the khids that correspond to zeb_genes in U. 
 # There will be repeats because there are 1 KHID -> multiple zeb_genes cases.   
-# 5490
+# 5487
 corr_khid_U <- ortho_mapping %>% filter(zeb_gene %in% unique_ortho_zeb_genes)
-# 3766
+# 3765
 corr_khids <- unique(corr_khid_U$khid)
 ```
 
@@ -107,6 +138,7 @@ subset_24hpf <- modify_mat(zeb_24hpf_noto_mat, unique_ortho_zeb_genes, "zeb_gene
 ############# COLLAPSE ZEB MATS subset_8hpf -> subset_8hpf_collapse (no khid col, only expression matrix) #############
  
 # Helper Function.  
+# I turn the tibble into a dataframe. 
 ```{r include=TRUE}
 collapse_zeb_mat <- function(zeb_mat, ortho_mapping) {
   # zeb_mat (n_zeb_genes x cells + zeb_gene) + ortho_mapping -> 
@@ -115,12 +147,13 @@ collapse_zeb_mat <- function(zeb_mat, ortho_mapping) {
   zeb_collapse <- zeb_collapse %>% group_by(khid) %>%
   summarize((across(starts_with("DEW"), sum))) %>%
   select(-khid)
+  zeb_collapse <- as.data.frame(zeb_collapse)
 return(zeb_collapse)
 }
 ```
 
 ```{r include=TRUE}
-# Collapses to 3766- perfect! 
+# Collapses to 3765- perfect! 
 subset_8hpf_collapse <- collapse_zeb_mat(subset_8hpf, ortho_mapping)
 subset_10hpf_collapse <- collapse_zeb_mat(subset_10hpf, ortho_mapping)
 subset_14hpf_collapse <- collapse_zeb_mat(subset_14hpf, ortho_mapping)
@@ -175,9 +208,9 @@ zeb_list = list(zeb_8hpf = subset_8hpf_collapse,
 ```
 
 
-################### REMOVE GENES THAT ARE NOT EXPRESSED IN ANY CELLS ###################
+################# FIND INDICES OF GENES THAT ARE NOT EXPRESSED IN ANY CELLS (all_genes_0) #################
 
-### Check if there are any 0's ###
+### Exploratory: Check if there are any 0's ###
 ```{r include=TRUE}
 all_num <- function(your_row, your_num) {
   # Do you see your_num in all entries of your_row?
@@ -192,7 +225,7 @@ any_num <- function(your_row, your_num) {
 }
 ```
 
-### Check if there are any 0's ###
+### Exploratory: Check if there are any 0's ###
 ```{r include=TRUE}
 # Input needs to be a dataframe, not a row of the dataframe! 
 # if col = 0 (MARGIN=2), cell isn't expressing anything; if row = 0, gene is not expressed in any cells (MARGIN=1) 
@@ -219,20 +252,32 @@ get_0_indices <- function(your_dataframe) {
 ```{r include=TRUE}
 # Get indices in Ciona. 59
 genes_0_ciona <- unique(unlist(map(ciona_list, get_0_indices)))
-# Get indices in Zeb. 842
+# Get indices in Zeb. 841
 genes_0_zeb <- unique(unlist(map(zeb_list, get_0_indices)))
-# Take the union of these. Make sure to unique them! 890
+# Take the union of these. Make sure to unique them! 886
 all_genes_0 <- unique(union(genes_0_ciona, genes_0_zeb))
 ```   
 
-# Remove those genes! 
+################### REMOVE GENES THAT ARE NOT EXPRESSED IN ANY CELLS -> ciona/zeb_removed_list ###################
+
 ```{r include=TRUE}
-test_remove <- c(1, 2, 3)
-test_df_remove <- test_df[-test_remove, ]
-test_df_remove
+remove_0_genes <- function(your_dataframe, remove_indices) {
+  # After getting the indices (remove_indices) for which there is 0 expression of genes,
+  # remove these genes from dataframe.
+  removed_df <- your_dataframe[-remove_indices, ]
+  return(removed_df)
+}
 ```
 
-############# GSM THEM ciona_list -> ciona_list_gsm ############ 
+# Get rid of the genes.
+```{r include=TRUE}
+# 2897 x num_cells
+ciona_removed_list <- map(ciona_list, remove_0_genes, all_genes_0)
+# 2897 x num_cells
+zeb_removed_list <- map(zeb_list, remove_0_genes, all_genes_0)
+```
+
+############# GSM THEM ciona_removed_list -> ciona_list_gsm ############ 
 
 # Helper Function. 
 ```{r include=TRUE}
@@ -256,85 +301,36 @@ make_gsm <- function(expression_matrix) {
 
 # Now you have the gsm'ed expression value matrices.
 ```{r include=TRUE}
-ciona_list_gsm <- map(ciona_list, make_gsm)
+ciona_list_gsm <- map(ciona_removed_list, make_gsm)
 ```
 
 ```{r include=TRUE}
-zeb_list_gsm <- map(zeb_list, make_gsm)
+zeb_list_gsm <- map(zeb_removed_list, make_gsm)
 ```
 
-# TRY THIS- CHANGE ALL NANS TO 0S AND SEE WHAT HAPPENS.
+# TEST ALL DFS #
 ```{r include=TRUE}
-new_8hpf <- zeb_list_gsm$zeb_8hpf
-new_8hpf[is.na(new_8hpf)] <- 0
-
-new_10hpf <- zeb_list_gsm$zeb_10hpf
-new_10hpf[is.na(new_10hpf)] <- 0
-
-new_14hpf <- zeb_list_gsm$zeb_14hpf
-new_14hpf[is.na(new_14hpf)] <- 0
-
-new_18hpf <- zeb_list_gsm$zeb_18hpf
-new_18hpf[is.na(new_18hpf)] <- 0
-
-new_24hpf <- zeb_list_gsm$zeb_24hpf
-new_24hpf[is.na(new_24hpf)] <- 0
+test_df <- zeb_list_gsm$zeb_24hpf
 ```
 
-# New zeb gsm list 
+# (1) Check that there aren't any 0's in any direction.
 ```{r include=TRUE}
-new_zeb_gsm <- list(new_8hpf = new_8hpf,
-                    new_10hpf = new_10hpf,
-                    new_14hpf = new_14hpf,
-                    new_18hpf = new_18hpf,
-                    new_24hpf = new_24hpf)
+# Input needs to be a dataframe, not a row of the dataframe! 
+# if col = 0 (MARGIN=2), cell isn't expressing anything; if row = 0, gene is not expressed in any cells (MARGIN=1) 
+all_num_logical <- apply(test_df, MARGIN=1, FUN=all_num, your_num=0)
+all_num_sum <- sum(all_num_logical)
+all_num_sum
 ```
 
-############ START TROUBLESHOOTING: ANY NANS? ################
-
-# Get individual gsms. 
+# (2) Check that there aren't any NAs anywhere in the dataframe.
 ```{r include=TRUE}
-test_ciona_gsm <- ciona_list$iniG
+sum(is.na(test_df))
 ```
+####### CROSS CIONA_LIST_GSM AND ZEB_LIST_GSM TO MAKE PAIRS OF GSM'ED NOTO MATRICES = cross_gsm (c x z) ###### 
 
-```{r include=TRUE}
-test_zeb_gsm <- zeb_list_gsm$zeb_8hpf
-```
-
-# Set a subset 
-```{r include=TRUE}
-your_subset <- test_zeb_gsm
-```
-
-# (1) Check if any NaN- Yes for Zeb GSMs. 
-```{r include=TRUE}
-sum(is.na(your_subset))
-```
-
-# Are there rows with mean of 0?
-```{r include=TRUE}
-
-test_8hpf <- subset_8hpf_collapse %>% mutate(my_mean = rowMeans(.)) %>%
-  mutate(khids = corr_khids) %>%
-  filter(my_mean == 0) %>%
-  select(my_mean, khids)
-```
-
-# Example of khid with mean 0 
-```{r include=TRUE}
-test_khid <- "KH2012:KH.C3.815"
-# dse dsela
-test_ortho_strings <- ortho_dict
-
-test_ortho_strings
-```
-
-############ END TROUBLESHOOTING: ANY NANS? ################
-
-# Cross test_ciona_list_gsm and test_zeb_list_gsm to make pairs of gsm'ed noto matrices (c x z) = test_cross_gsm. 
 ```{r include=TRUE}
 # Here I want to get pairwise key names. # zeb_list_gsm
-cross_gsm <- cross2(ciona_list_gsm, new_zeb_gsm)
+cross_gsm <- cross2(ciona_list_gsm, zeb_list_gsm)
 ```
 
 # Give informative key names.
@@ -350,7 +346,8 @@ give_names <- function(your_list) {
 }
 ```
 
-# Get the names - CORRECT 
+# REAL
+# Get the names
 ```{r include=TRUE}
 cross_gsm_names <- cross2(names(ciona_list_gsm), names(zeb_list_gsm))
 cross_gsm_names <- cross_gsm_names %>% map(give_names)
@@ -358,6 +355,7 @@ cross_gsm_names <- cross_gsm_names %>% map(give_names)
 names(cross_gsm) <- cross_gsm_names
 ```
 
+# REAL
 # I want to do a function on each of these pairs- present in [[1]] and [[2]].
 ```{r include=TRUE}
 do_correlation <- function(pairwise_gsm_mats) {
@@ -368,17 +366,65 @@ do_correlation <- function(pairwise_gsm_mats) {
                            y = zeb_gsm,
                            method = "spearman",
                            adjust = "fdr")
-  return(corr_output)
+  corr_r <- as.numeric(corr_output$r)
+  corr_p <- as.numeric(corr_output$p)
+  
+  ans_list = list(corr_output = corr_output,
+                  corr_r = corr_r,
+                  corr_p = corr_p)
+  
+  return(ans_list)
 }
 ```
 
-# Apply cor to all the pairs and get results = test_gsm_corrs. 
+# TEST
+# Try on a small part of gsm_corrs.
+```{r include=TRUE}
+# Note: this cross_gsm was defined below in the code with test cases and variables. 
+test_cross_gsm <- cross_gsm[1]
+```
+
+# TEST
+# Manually using base -> correlation function in do_correlation (corr.test) is correct.
+# Thus, I trust the p_val and r_mat. 
+```{r include=TRUE}
+test_pairwise <- test_cross_gsm$`gsm_iniG/zeb_8hpf`
+test_pair_1 <- test_pairwise[[1]]
+test_pair_2 <- test_pairwise[[2]]
+
+test_base_cor <- cor(test_pair_1, test_pair_2, method = "spearman")
+```
+
+# TEST
+# Using do_correlation function.
+```{r include=TRUE}
+test_gsm_corrs <- map(test_cross_gsm, do_correlation)
+test_gsm_r <- test_gsm_corrs$`gsm_iniG/zeb_8hpf`$r
+test_gsm_p <- test_gsm_corrs$`gsm_iniG/zeb_8hpf`$p
+```
+
+# TEST
+# What is the distribution of these p and r scores?
+```{r include=TRUE}
+test_gsm_r_dist <- as.numeric(test_gsm_r)
+hist(test_gsm_r_dist)
+mean(test_gsm_r_dist)
+median(test_gsm_r_dist)
+
+test_gsm_p_dist <- as.numeric(test_gsm_p)
+hist(test_gsm_p_dist)
+mean(test_gsm_p_dist)
+median(test_gsm_p_dist)
+```
+
+# REAL
 ```{r include=TRUE}
 # List of length 4. 
 gsm_corrs <- map(cross_gsm, do_correlation)
 names(gsm_corrs) <- cross_gsm_names
 ```
 
+# REAL:
 # Get significant correlations. 
 ```{r include=TRUE}
 get_sig_corrs <- function(corr_output) {
@@ -412,23 +458,42 @@ rownames(heatmap_mat) <- names(ciona_list)
 colnames(heatmap_mat) <- names(zeb_list)
 ```
 
-# Consider what I might do if there are NAs... Just for testing
-# ```{r include=TRUE}
-# test_NA_indices <- is.na(test_heatmap_mat)
-# test_heatmap_mat[test_NA_indices] <- c(0.4, 0.1, 0.8, 0.2)
-# ```
-
 ```{r include=TRUE}
 ggcorrplot(heatmap_mat)
 ```
+# What if we didn't filter for significant correlations?
+```{r include=TRUE}
+get_r <- function(corr_output) {
+  corr_r <- corr_output$r
+  return(corr_r)
+}
+```
 
+# Get median of all correlations. 
+```{r include=TRUE}
+test_cor_rs <- map(gsm_corrs, get_r) %>% map_dbl(median)
+```
 
+# Turn it into a matrix that you can visualize.
+```{r include=TRUE}
+test_corr_mat <- as.data.frame(matrix(test_cor_rs, nrow=length(ciona_list), ncol=length(zeb_list)))
+rownames(test_corr_mat) <- names(ciona_list)
+colnames(test_corr_mat) <- names(zeb_list)
+```
 
+```{r include=TRUE}
+# c(-0.003, 0.0041) , midpoint = 0.00055, low = "blue", high =  "red", mid = "white"
+m <- ggcorrplot(1000*test_corr_mat)
+m + scale_fill_gradient2(limit = c(-3, 2), low = "blue", high =  "red", mid = "white")
+```
 
+```{r include=TRUE}
+hist(test_cor_rs)
+```
 ############### TESTS #################
 
 ```{r include=TRUE}
-test_df <- data.frame(a = c(0, 0, 0, 0, 0, 0, 0), b = c(1, 0, 1, 4, 1, 2, 3), d = c(1, 0, 1, 3, 4, 7, 2))
+test_df <- data.frame(a = c(NA, 0, 0, 0, 0, 0, 0), b = c(1, 0, 1, 4, 1, 2, 3), d = c(1, 0, 1, 3, 4, 7, 2))
 test_df
 
 test_df_2 <- data.frame(a = c(1, 2, 5, 6), b = c(4, 5, 3, 4), d = c(2, 6, 7, 3))
@@ -443,11 +508,44 @@ test_df_4
 test_df_5 <- data.frame(a = c(1, 5, 10, 5), b = c(10, 1, 2, 8), c = c(9, 1, 2, 4))
 test_df_5
 ```
+```{r include=TRUE}
+test_list <- list(test_df = test_df,
+                  test_df_2 = test_df_2,
+                  test_df_3 = test_df_3)
+```
+
+# Are there any NAs?
+```{r include=TRUE}
+test_df <- test_list$test_df
+sum(is.na(test_df))
+```
+
 # Remove rows given indices. 
 ```{r include=TRUE}
 test_remove <- c(1, 2, 3)
 test_df_remove <- test_df[-test_remove, ]
 test_df_remove
+```
+
+```{r include=TRUE}
+remove_0_genes <- function(your_dataframe, remove_indices) {
+  # After getting the indices (remove_indices) for which there is 0 expression of genes,
+  # remove these genes from dataframe.
+  removed_df <- your_dataframe[-remove_indices, ]
+  return(removed_df)
+}
+```
+
+```{r include=TRUE}
+test_df
+test_remove <- c(1, 2, 3)
+test_2 <- remove_0_genes(test_df, test_remove)
+test_2
+```
+
+
+```{r include=TRUE}
+test_ans <- map(test_list, remove_0_genes, test_remove)
 ```
 
 # Check if there are any 0's
@@ -463,6 +561,7 @@ any_num <- function(your_row, your_num) {
 }
 ```
 
+# Check if you have any and all 0's
 ```{r include=TRUE}
 test_test_df <- test_df
 any_num_logical <- apply(test_test_df, MARGIN=2, FUN=any_num, your_num=0)
@@ -473,5 +572,47 @@ all_num_logical <- apply(test_test_df, MARGIN=2, FUN=all_num, your_num=0)
 all_num_sum <- sum(all_num_logical)
 all_num_sum
 
+```
+
+#### THERE IS SOMETHING WRONG IN CALLINGT THIS FUNCTION ####
+
+# I want to do a function on each of these pairs- present in [[1]] and [[2]].
+```{r include=TRUE}
+do_correlation <- function(pairwise_gsm_mats) {
+  cat("Starting \n\n")
+  ciona_gsm <- pairwise_gsm_mats[[1]]
+  zeb_gsm <- pairwise_gsm_mats[[2]]
+  corr_output <- corr.test(x= ciona_gsm,
+                           y = zeb_gsm,
+                           method = "spearman",
+                           adjust = "fdr")
+  corr_r <- as.numeric(corr_output$r)
+  corr_p <- as.numeric(corr_output$p)
+  
+  ans_list = list(corr_output = corr_output,
+                  corr_r = corr_r,
+                  corr_p = corr_p)
+  
+  return(ans_list)
+}
+```
+
+# Apply cor to all the pairs and get results = gsm_corrs. 
+# TEST: Try on a small part of gsm_corrs.
+
+```{r include=TRUE}
+# cross_gsm[1:2]
+test_cross_gsm <- list(
+  list(test_df_2 = test_df_2, test_df_3 = test_df_3),
+  list(test_df_4 = test_df_4, test_df_5 = test_df_5))
+```
+
+# Give them names
+```{r include=TRUE}
+names(test_cross_gsm) <- c("2_3", "4_5")
+```
+
+```{r include=TRUE}
+test_gsm_corrs <- map(test_cross_gsm, do_correlation)
 ```
 
