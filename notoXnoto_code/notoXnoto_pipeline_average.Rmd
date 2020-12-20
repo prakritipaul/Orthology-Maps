@@ -2,6 +2,8 @@
 title: "notoXnoto_pipeline_average"
 output: html_document
 ---
+# Purpose of Script: Make ciona timepoint x zeb timepoint Heatmap.
+# Also: 12/18/20: Gene List Analyses are also performed here. (Adapted from "one2one_orthology_map_generator.Rmd")
 
 (1) ciona_list {key:iniG, value:3765 x num_cells} -> ciona_av_cols_list {key:iniG, value:average vector of length 3765}
 (2) ciona_av_cols_list -> ciona_av_col_df (3765 x 10 df- one for each timepoint)
@@ -57,7 +59,6 @@ ortho_zeb_genes <- ortho_mapping$zeb_gene
 ```{r include=TRUE}
 # This is a dataframe with zeb_genes that have 1-1 and 1-many orthologs. (U)
 # 6490 
-
 unique_zeb_gene_df <- ortho_mapping %>% group_by(zeb_gene) %>% summarise(num = n()) %>% dplyr::filter(num==1)
 colnames(unique_zeb_gene_df)
 ```
@@ -281,6 +282,9 @@ any_num <- function(your_row, your_num) {
 }
 ```
 
+```{r include=TRUE}
+test <- apply(ciona_timepoint_gsm, MARGIN=2, FUN=any_num, your_num=0)
+```
 
 ```{r include=TRUE}
 # Gets logical that describes all the cols with all 0s.
@@ -315,7 +319,7 @@ do_correlation <- function(ciona_gsm, zeb_gsm) {
 ```
 
 ```{r include=TRUE}
-timepoint_corr_output <- do_correlation(zeb_timepoint_gsm, zeb_timepoint_gsm)
+timepoint_corr_output <- do_correlation(ciona_timepoint_gsm, zeb_timepoint_gsm)
 ```
 
 ############ VISUALIZE #############
@@ -342,7 +346,7 @@ limits <- c(min.index-leeway, max.index+leeway)
 
 # Aesthetics and labels. 
 your.title <- "Notochord Time-course Similarity"
-your.xlab <- "Zeb"
+your.xlab <- "Ciona"
 your.ylab <- "Zeb"
 your.fill <- "Corr"
 #4388F0, 42B5DD
@@ -387,6 +391,382 @@ perc_sig <- num_sig/num_CTs*100
 perc_sig
 ```
 
+#####################  GET NAMES OF GENES THAT ARE EXPRESSED IN PAIRS OF CELL TYPES  ####################
+
+# Helper Functions.
+```{r include=TRUE}
+get_non_0s <- function(df) {
+  # Given 2 gsme'ed columns turned into a dataframe (col_1 ciona, col_2 zeb), 
+  # get indices of both that are non-0 in both (genes expressed).
+  col_1 <- as.numeric(df[, 1])
+  col_2<- as.numeric((df[, 2]))
+  non0_indices <- which(col_1 != 0 & col_2 !=0)
+  return(non0_indices)
+}
+
+get_indexed_khids_zeb_strings <- function(index_vector, corr_khids) {
+  # When you know the indices of genes that are expressed in both
+  # get their khids and zeb_names. 
+  # I'm using corr_khids, khids with only 1-many zeb orthologs. 
+  
+  indexed_khids <- corr_khids[index_vector]
+  indexed_zeb_strings <- ortho_dict_zeb_strings[index_vector]
+  
+  ans_list <- list(indexed_khids, indexed_zeb_strings)
+  
+  return(ans_list)
+}
+```
+
+# Now apply this to Ciona and Zeb GSMs
+```{r include=TRUE}
+ciona_tp_list <- as.list(ciona_timepoint_gsm)
+zeb_tp_list <- as.list(zeb_timepoint_gsm)
+test_gsm <- data.frame("dum_1"=rep(0, nrow(ciona_timepoint_gsm)), "dum_2"=rep(1, nrow(ciona_timepoint_gsm)))
+test_tp_list <- as.list(test_gsm)
+
+your_list <- zeb_tp_list
+
+# Make a list in which each element is a 2-size list with each as a column
+cz_cross <- cross2(ciona_tp_list, your_list)
+
+## USE ##
+# Get indices of both non-0 elements in col_1 and col_2 
+cz_map <- map(cz_cross, as.data.frame) %>% map(get_non_0s)
+
+cz_map_2 <- map(cz_map, get_indexed_khids_zeb_strings, ortho_dict)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+###################    GENE LIST MUNGING    ####################
+"""
+Various lists for TF and SMG filtering
+"""
+
+# TF List 1: Nitta 2019 (SELEX Project)- 964 ciona_tfs
+# TO DO: Clean up the dataframe, not just get gene names. 
+```{r include=TRUE}
+ciona_tf_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/ciona_regulatory_regions/unmunged_ciona_TFs.csv"
+
+ciona_tf_df <- read.table(ciona_tf_dir,
+                          sep = ",",
+                          stringsAsFactors = FALSE,
+                          header = TRUE)
+
+# Important Variable (964 Nitta TFs)
+ciona_tfs <- ciona_tf_df$KH.model.ID
+ciona_tfs <- ciona_tfs[!ciona_tfs == ""]
+ciona_tfs <- paste("KH2012:", ciona_tfs, sep = "")
+```
+
+# List 2: Aniseed Human Ortholog File (This is a df)
+```{r include=TRUE}
+khid_human_ortho_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/lifechanging_aniseed_files/ANISEED-Cirobu-GeneName-3bestBlastHitHuman.rnames"
+
+# Gene.ID, Gene.Name: 26426
+khid_human_ortho_df <- read.table(khid_human_ortho_dir,
+                                  sep = "\t",
+                                  stringsAsFactors = FALSE,
+                                  header = TRUE)
+```
+
+# List 3: Kai Ghost Curation: TF and SMG List 1023 (all_kai_genes)
+```{r include=TRUE}
+kai_tf_smg_dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/ciona_regulatory_regions/kai_tf_smg_list.csv"
+
+kai_tf_smg_df <- read.table(kai_tf_smg_dir,
+                            sep = ",",
+                            header = TRUE,
+                            stringsAsFactors = FALSE)
+```
+
+# Munge KHIDs.
+```{r include=TRUE}
+add_kh_tag <- function(kh_name) {
+  full_kh_name <- paste0("KH2012:", kh_name)
+  return(full_kh_name)
+}
+
+new_col <- as.data.frame(sapply(kai_tf_smg_df[, 1], add_kh_tag))
+colnames(new_col) <- "KH.gene.model"
+kai_tf_smg_df[, 1] <- new_col 
+
+# Important Variable (1023 Kai TF/SMGs)
+all_kai_genes <- as.vector(kai_tf_smg_df$KH_gene_model)
+```
+
+"""
+How many of these 1-1 DEG Orthologs are TFs?
+"""
+
+# KHID and Zeb Names
+```{r include=TRUE}
+ciona.tf.indices <- which(qualified_ciona_khids %in% ciona.tfs)
+
+# What are their names?
+qual.ciona.tfs <- qualified_ciona_khids[ciona.tf.indices]
+qual.zeb.tfs <- qualified_zeb_genes[ciona.tf.indices]
+
+cat(qual.ciona.tfs, sep="\n")
+cat("\n")
+cat(qual.zeb.tfs, sep="\n")
+```
+
+# Human Orthologs 
+```{r include=TRUE}
+qual.human.tfs <- khid.human.ortho.df[khid.human.ortho.df$Gene.ID %in% qual.ciona.tfs, ]
+qual.human.tfs
+```
+# Print Results. 
+```{r include=TRUE}
+khid.names <- qual.human.tfs$Gene.ID
+khid.human.names <- qual.human.tfs$Gene.Name
+
+for (i in 1:length(khid.names)) {
+  my.name <- khid.names[i]
+  my.human.name <- khid.human.names[i]
+  
+  cat(my.name, "=", my.human.name, "\n")
+}
+```
+
+"""
+Analyses using Kai's files.
+"""
+# TF and SMG List: Kai (Ghost Curation)
+```{r include=TRUE}
+kai.tf.smg.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/ciona_regulatory_regions/kai_tf_smg_list.csv"
+
+kai.tf.smg.df <- read.table(kai.tf.smg.dir,
+                            sep = ",",
+                            header = TRUE,
+                            stringsAsFactors = FALSE)
+```
+
+# Munge KHIDs.
+```{r include=TRUE}
+add.kh.tag <- function(kh.name) {
+  full.kh.name <- paste0("KH2012:", kh.name)
+  return(full.kh.name)
+}
+
+new.col <- as.data.frame(sapply(kai.tf.smg.df[, 1], add.kh.tag))
+colnames(new.col) <- "KH.gene.model"
+kai.tf.smg.df[, 1] <- new.col 
+
+# Important Variable (1023 Kai TF/SMGs)
+all.kai.genes <- as.vector(kai.tf.smg.df$KH.gene.model)
+```
+
+# Which 1-1 DEG Orthologs are TF/SMGs?
+```{r include=TRUE}
+kai.filtered.df <- kai.tf.smg.df %>% filter(KH.gene.model %in% qualified_ciona_khids)
+```
+
+# Print Results 
+```{r include=TRUE}
+# Kai genes are filtered (within 1-1 DEG Ortholog List) NOT ALL KAI GENES
+kai.genes <- as.vector(kai.filtered.df$KH.gene.model)
+kai.gene.names <- kai.filtered.df$Ghost.Name
+kai.class <- kai.filtered.df$Ghost.class
+
+for (i in 1:length(kai.genes)) {
+  my.gene <- kai.genes[i]
+  my.gene.name <- kai.gene.names[i]
+  my.class <- kai.class[i]
+  
+  cat(my.gene, "=", my.gene.name, "(", my.class, ")","\n")
+}
+```
+
+# Quick Utility to get ciona khid and zeb gene names for kai.genes
+```{r include=TRUE}
+# Tells you INDICES of 1-1 ciona khids that are kai genes.
+kai.gene.indices <- which(qualified_ciona_khids %in% kai.genes)
+
+# These tell you which 1-1 ciona khids are kai genes. 
+kai.ciona.genes <- qualified_ciona_khids[kai.gene.indices]
+kai.zeb.genes <- qualified_zeb_genes[kai.gene.indices]
+```
+
+##### Part 3: GENE LIST ANALYSES #####
+"""
+Start For Individual CT Analyses (Re-Analyses)
+"""
+# CHANGE directories for individual CTs.
+```{r include=TRUE}
+ciona.CT.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_0/24hpf_2hearts_gene_analyses/2CT_analyses/larva_noto_24hpf_noto_analyses/larva_noto_24hpf_noto_DEG_logFC0_khids.csv"
+
+zeb.CT.dir <- "/home/pprakriti/princeton_google_drive/Levine Lab/Orthology-Maps/1_CURRENT/one2one_larva_24hpf/logFC_0/24hpf_2hearts_gene_analyses/2CT_analyses/larva_noto_24hpf_noto_analyses/larva_noto_24hpf_noto_DEG_logFC0_zebgenes.csv"
+
+ciona.CT.df <- read.table(ciona.CT.dir,
+                          sep =",",
+                          header = FALSE,
+                          stringsAsFactors = FALSE)
+
+zeb.CT.df <- read.table(zeb.CT.dir,
+                          sep =",",
+                          header = FALSE,
+                          stringsAsFactors = FALSE)
+
+ciona.CT.genes <- ciona.CT.df$V1
+zeb.CT.genes <- zeb.CT.df$V1
+
+length(ciona.CT.genes)
+```
+
+# Nitta and Kai Filtering for individual CTs. 
+(Can use below in Visualizations as ciona_genes and zeb_genes)
+```{r include=TRUE}
+# Which of these are Nitta TFs?
+ciona.CT.nitta.indices <- which(ciona.CT.genes %in% ciona.tfs)
+ciona.CT.nitta <- ciona.CT.genes[ciona.CT.nitta.indices]
+length(ciona.CT.nitta)
+
+# Which of these are Kai TF SMGs?
+ciona.CT.kai.indices <- which(ciona.CT.genes %in% kai.genes)
+ciona.CT.kai <- ciona.CT.genes[ciona.CT.kai.indices]
+length(ciona.CT.kai)
+```
+
+# Get Human Orthologs for individual CTs.
+# CHANGE filtered.genes = ciona.CT.nitta/kai
+```{r include=TRUE}
+filtered.genes <- ciona.CT.kai
+filtered.genes
+cat("\n\n")
+  
+# Dataframe: KHID, Human Ortholog
+filtered.human.khids <- khid.human.ortho.df[khid.human.ortho.df$Gene.ID %in% filtered.genes, ]
+filtered.names <- filtered.human.khids$Gene.Name
+
+filtered.names
+cat("\n\n")
+
+filtered.human.khids
+```
+
+
+"""
+End For Individual CT Analyses (Re-Analyses)
+"""
+
+"""""""
+Part 3: What are the highly expressed genes here?
+Note: All Analyses below pertain to logFC>0. 
+
+(1) Pick Genes:
+a) all 1-1 DEG Orthologs (2466)
+qualified_ciona_khids, qualified_zeb_genes
+Correlation of 2466 1-1 DEG Orthologs
+
+b) Nitta filtering (235) 
+qual.ciona.tfs, qual.zeb.tfs
+Correlation of Nitta TFs
+
+c) Kai filtering (197)
+kai.ciona.genes, kai.zeb.genes
+Correlation of Kai TF and SMGs
+
+d) For individual CTs
+ciona.CT.genes, zeb.CT.genes
+(would have been defined before) filtered.genes <- ciona.CT.nitta, ciona.CT.kai
+
+(2) Pick pairs of CTs
+ciona.CT, zeb.CT
+
+""""""""
+
+# Specify Genes and CTs.
+```{r include=TRUE}
+# Change
+ciona.CT <- "noto"
+zeb.CT <- "noto"
+ciona_genes <- ciona.CT.genes
+zeb_genes <- zeb.CT.genes
+
+ciona.CT.av.exp <- ciona_gsm_v4[ciona_genes, ciona.CT]
+zeb.CT.av.exp <- zeb_gsm_v4[zeb_genes, zeb.CT]
+
+scatter.df <- data.frame(ciona.CT = ciona.CT.av.exp,
+                         zeb.CT = zeb.CT.av.exp,
+                         khid = ciona_genes,
+                         zeb.genes = zeb_genes)
+
+zeb.noto <- "zeb_noto"
+colnames(scatter.df)[1:2] <- c(ciona.CT, zeb.noto)
+```
+
+(3) Visualize
+```{r include=TRUE}
+# Change
+your.title <- "Correlation of CT 1-1 DEG Orthologs"
+your.av.exp.cutoff.ciona <- 1
+your.av.exp.cutoff.zeb <- 1
+
+new.labels <- gsub("KH2012:KH.", "", ciona_genes)
+ 
+scatter.plot <- ggplot(scatter.df,
+                       aes(x = ciona.CT.av.exp, y = zeb.CT.av.exp)) +
+                       geom_point() + 
+  
+                       geom_text(size=2.5, hjust=0, vjust=0, angle=0, aes(label = ifelse(ciona.CT.av.exp>your.av.exp.cutoff.ciona & zeb.CT.av.exp>your.av.exp.cutoff.zeb, as.character(new.labels), ""))) +
+  
+  ggtitle(your.title) +
+  xlab(ciona.CT) +
+  ylab(zeb.CT) +
+  geom_abline()
+
+scatter.plot
+```
+
+(4) Get the Human Orthologs of above KHIDs. (Manually Curated from Scatter Plot)
+```{r include=TRUE}
+res.ciona.khids <- c("C5.525", "C5.1", "L171.10", "C3.308")
+
+res.ciona.khids <- paste0("KH2012:KH.", res.ciona.khids)
+
+# Dataframe: KHID, Human Ortholog
+res.human.khids <- khid.human.ortho.df[khid.human.ortho.df$Gene.ID %in% res.ciona.khids, ]
+
+res.names <- res.human.khids$Gene.Name
+res.names
+```
+
+# Interactive Scatter Plot
+```{r include=TRUE}
+# x = ciona.CT.av.exp, y = zeb.CT.av.exp
+fig <- plot_ly(type = "scatter", scatter.df, x = ~noto, y = ~zeb_noto, text = ~khid)
+
+fig
+```
+
+(4) Get the Human Orthologs of above KHIDs. (Manually Curated from Interactive Scatter Plot)
+```{r include=TRUE}
+my.genes <- c("KH2012:KH.C14.310")
+my.genes
+cat("\n\n")
+  
+# Dataframe: KHID, Human Ortholog
+my.human.khids <- khid.human.ortho.df[khid.human.ortho.df$Gene.ID %in% my.genes, ]
+my.names <- my.human.khids$Gene.Name
+
+my.names
+cat("\n\n")
+
+my.human.khids
+```
+
 
 
 
@@ -403,6 +783,81 @@ perc_sig
 
 
 ############ UNUSED ##############
+
+# TEST GSM'ED STUFF
+```{r include=TRUE}
+df_3 <- data.frame("h"=c(0, 0, 0, 5, 6), "i"=c(1, 2, 2, 5, 6), "j"=c(3, 4, 6, 5, 6))
+df_4 <- data.frame("k"=c(0, 2, 3, 5, 6), "l"=c(1, 3, 0, 0, 0), "m"=c(3, 8, 6, 7, 9))
+
+df_list_1 <- list(df_1, df_2)
+df_list_2 <- list(df_3, df_4)
+```
+
+```{r include=TRUE}
+# , "b"=c(4, 0, 5), "b"=c(4, 0, 5), "c"=c(4, 0, 5)
+test_df_1 <- data.frame("a"=c(1, 2, 3, 6, 6), "b"=c(4, 0, 5, 6, 7))
+# "e"=c(0, 1, 2), "f"=c(0, 0, 2), "g"=c(0, 9, 1)
+test_df_2 <- data.frame("d"=c(0, 9, 1, 0, 0), "l"=c(1, 2, 3, 5, 6), "g"=c(0, 9, 1, 1, 0))
+
+test_rownames <- c("llama", "alpaca", "yousuck")
+
+test_df_list_1 <- as.list(test_df_1)
+test_df_list_2 <- as.list(test_df_2)
+
+## USE ##
+get_non_0s <- function(df) {
+  # Given 2 gsme'ed columns turned into a dataframe (col_1 ciona, col_2 zeb), 
+  # get indices of both that are non-0 in both (genes expressed).
+  col_1 <- as.numeric(df[, 1])
+  col_2<- as.numeric((df[, 2]))
+  non0_indices <- which(col_1 != 0 & col_2 !=0)
+  return(non0_indices)
+}
+
+## USE ##
+# Make a list in which each element is a 2-size list with each as a column
+test_cross <- cross2(test_df_list_1, test_df_list_2)
+
+## USE ##
+# Get indices of both non-0 elements in col_1 and col_2 
+test_map <- map(test_cross, as.data.frame) %>% map(get_non_0s)
+```
+
+```{r include=TRUE}
+## USE ##
+# Now get the names of those genes. 
+# get_indexed_khids_zeb_strings <- function(index_vector, corr_khids) {
+#   ortho_dict_khids <- corr_khids[index_vector]
+#   ortho_dict_zeb_strings <- ortho_dict %>% filter(khid %in% ortho_dict_khids)
+#   ortho_dict_zeb_strings <- as.vector(ortho_dict_zeb_strings$zeb_gene)
+#                                                   
+#   indexed_khids <- ortho_dict_khids[index_vector]
+#   indexed_zeb_strings <- ortho_dict_zeb_strings[index_vector]
+#   
+#   ans_list <- list(indexed_khids, indexed_zeb_strings)
+#   
+#   return(ans_list)
+# }
+# 
+# ## USE ##
+# test_map_2 <- map(test_map, get_indexed_khids_zeb_strings, ortho_dict)
+
+test_corr_khids <- corr_khids[1:10]
+test_corr_khids
+cat("\n\n")
+
+test_index_vector <- c(1, 2, 5)
+
+test_ortho_dict_khids <- test_corr_khids[test_index_vector] 
+test_ortho_dict_khids
+```
+
+```{r include=TRUE}
+test_ortho_dict_zeb_strings <- ortho_dict %>% filter(khid %in% test_ortho_dict_khids)
+
+
+```
+
 
 ### TESTING NEW collapse_zeb_mat function BECAUSE KHIDS ARE IN ALPHA'LY ORDER! 
 ```{r include=TRUE}
